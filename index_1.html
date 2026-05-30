@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>契約管理ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f3ef; --surface: #ffffff; --surface2: #f0eeea; --border: #e2dfd8;
+    --text: #1a1917; --text-muted: #7a7871; --text-faint: #b0ada6;
+    --blue: #185FA5; --blue-light: #E6F1FB; --green: #0F6E56; --green-light: #E1F5EE;
+    --amber: #854F0B; --amber-light: #FAEEDA; --red: #A32D2D; --red-light: #FCEBEB;
+    --purple: #6B4FA3; --purple-light: #EFE9F7;
+    --sidebar-w: 220px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #18181a; --surface: #232325; --surface2: #2c2c2e; --border: #38383a;
+      --text: #f0eeea; --text-muted: #9a9892; --text-faint: #5a5856;
+      --blue-light: #0c2540; --green-light: #042c20; --amber-light: #2a1800; --red-light: #280f0f; --purple-light: #1f1530;
+    }
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+  /* ===== レイアウト：サイドバー + メイン ===== */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: var(--sidebar-w); flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; bottom: 0;
+    display: flex; flex-direction: column; z-index: 200; transition: transform 0.25s;
+  }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .logo-mark { width: 28px; height: 28px; background: var(--text); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-mark svg { width: 16px; height: 16px; fill: var(--surface); }
+  .brand-title { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .nav { padding: 12px 10px; flex: 1; }
+  .nav-section { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); padding: 12px 10px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px;
+    font-size: 13px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+    border: none; background: transparent; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--text); color: var(--surface); font-weight: 500; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-footer { padding: 12px 18px; border-top: 1px solid var(--border); }
+  .source-row { display: flex; gap: 6px; margin-top: 8px; }
+  .source-badge { font-size: 10px; padding: 4px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: all 0.15s; background: transparent; font-family: 'DM Sans', sans-serif; flex: 1; }
+  .source-badge.active { background: var(--text); color: var(--surface); border-color: var(--text); }
+
+  .content { flex: 1; margin-left: var(--sidebar-w); min-width: 0; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 100; }
+  .topbar-title { font-size: 15px; font-weight: 500; }
+  .menu-btn { display: none; background: transparent; border: none; cursor: pointer; color: var(--text); padding: 4px; }
+  .menu-btn svg { width: 22px; height: 22px; }
+  .last-updated { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .main { padding: 1.5rem 2rem 3rem; max-width: 1280px; margin: 0 auto; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 10px; margin-top: 2rem; }
+  .section-label:first-child { margin-top: 0; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+  .metric-cell { background: var(--surface); padding: 18px 20px; }
+  .metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .metric-val { font-size: 24px; font-weight: 500; color: var(--text); font-family: 'DM Mono', monospace; }
+  .metric-val.danger { color: var(--red); }
+  .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+  .metric-delta { font-size: 11px; margin-top: 4px; }
+  .delta-up { color: var(--green); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .card-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .card-meta { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+  .stage-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .stage-inquiry { background: var(--blue-light); color: var(--blue); }
+  .stage-meeting { background: var(--purple-light); color: var(--purple); }
+  .stage-contract { background: var(--green-light); color: var(--green); }
+  .period-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; }
+  .period-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .period-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .status-cell { background: var(--surface2); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-name { font-size: 11px; color: var(--text-muted); }
+  .status-count { font-size: 18px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .rtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rtable th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 0 8px 10px; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  .rtable td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  .rtable tr:last-child td { border-bottom: none; }
+  .rtable tr:hover td { background: var(--surface2); }
+  .rtable tr.moved-row td { opacity: 0.5; }
+  .days-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .days-ok { background: var(--green-light); color: var(--green); }
+  .days-warn { background: var(--amber-light); color: var(--amber); }
+  .days-danger { background: var(--red-light); color: var(--red); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--surface2); color: var(--text-muted); }
+  .done-mark { color: var(--green); font-weight: 500; }
+  .filter-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer; user-select: none; }
+  .switch { position: relative; width: 32px; height: 18px; background: var(--border); border-radius: 10px; transition: background 0.2s; flex-shrink: 0; }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--surface); border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .switch.on { background: var(--green); }
+  .switch.on::after { transform: translateX(14px); }
+  .header-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .date-filter { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+  .date-filter label { white-space: nowrap; }
+  .date-filter input[type="date"] { font-family: 'DM Mono', monospace; font-size: 11px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); color-scheme: light dark; }
+  .date-filter .clear-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .date-filter .clear-btn:hover { background: var(--surface2); color: var(--text); }
+  .empty-row td { color: var(--text-faint); text-align: center; padding: 16px; }
+  .forecast-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 680px) { .forecast-row { grid-template-columns: 1fr; } }
+  .forecast-period { font-size: 11px; color: var(--text-faint); margin-bottom: 6px; }
+  .forecast-amount { font-size: 28px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); margin-bottom: 4px; }
+  .forecast-bar { height: 3px; background: var(--surface2); border-radius: 2px; margin: 14px 0 10px; overflow: hidden; }
+  .forecast-fill { height: 100%; border-radius: 2px; }
+  .forecast-breakdown { display: flex; gap: 16px; flex-wrap: wrap; }
+  .breakdown-item { font-size: 11px; color: var(--text-muted); }
+  .breakdown-val { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+  .legend-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-line { width: 18px; height: 2px; border-top: 2px dashed; flex-shrink: 0; position: relative; }
+  .funnel-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
+  @media (max-width: 680px) { .funnel-row { grid-template-columns: 1fr; } }
+  .funnel-cell { border-radius: 10px; padding: 16px; color: #fff; }
+  .funnel-num { font-size: 30px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .funnel-name { font-size: 12px; opacity: 0.9; }
+  .funnel-rate { font-size: 11px; opacity: 0.85; margin-top: 4px; }
+  .analytics-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .analytics-row { grid-template-columns: 1fr; } }
+  .notice { font-size: 11px; color: var(--text-faint); text-align: center; padding: 16px; border-top: 1px solid var(--border); margin-top: 2rem; }
+
+  /* オーバーレイ（モバイル時） */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150; }
+
+  @media (max-width: 880px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .content { margin-left: 0; }
+    .menu-btn { display: block; }
+    .overlay.show { display: block; }
+    .main { padding: 1rem 1rem 2rem; }
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ===== サイドバー ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-mark"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v8h8v-3h2v5H2V2zm7 0h5v5h-2V4.414L7.707 9.707 6.293 8.293 11.586 3H9V1z"/></svg></div>
+      <span class="brand-title">契約管理<br>ダッシュボード</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">メニュー</div>
+      <button class="nav-item active" data-view="overview" onclick="switchView('overview', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        契約サマリー
+      </button>
+      <button class="nav-item" data-view="pipeline" onclick="switchView('pipeline', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>
+        営業パイプライン
+      </button>
+      <button class="nav-item" data-view="analytics" onclick="switchView('analytics', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        流入チャネル分析
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size:10px; color:var(--text-faint); letter-spacing:0.06em;">データソース</div>
+      <div class="source-row">
+        <button class="source-badge active" onclick="setSource(this)">freee サイン</button>
+        <button class="source-badge" onclick="setSource(this)">Adobe Sign</button>
+      </div>
+    </div>
+  </aside>
+  <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- ===== コンテンツ ===== -->
+  <div class="content">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="menu-btn" onclick="openSidebar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <span class="topbar-title" id="topbarTitle">契約サマリー</span>
+      </div>
+      <span class="last-updated">更新：2025/05/30 09:00</span>
+    </div>
+
+    <!-- 概要ビュー -->
+    <div class="view active" id="view-overview">
+      <main class="main">
+
+
+  <div class="section-label">サマリー</div>
+  <div class="metric-grid">
+    <div class="metric-cell">
+      <div class="metric-label">総契約数（締結済み）</div>
+      <div class="metric-val" id="sumTotalContracts">-</div>
+      <div class="metric-delta delta-up" id="sumTotalDelta"></div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">今期売上（確定）</div>
+      <div class="metric-val" id="sumThisConfirmed">-</div>
+      <div class="metric-delta delta-up" id="sumThisDelta"></div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">締結待ち</div>
+      <div class="metric-val" id="sumPending">-</div>
+      <div class="metric-sub" id="sumPendingSub"></div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">要リマインド</div>
+      <div class="metric-val danger" id="sumReminder">-</div>
+      <div class="metric-sub">14日以上経過</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">今期見込み売上</div>
+      <div class="metric-val" id="sumThisForecast">-</div>
+      <div class="metric-sub">確定 + 進行中</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">来期見込み売上</div>
+      <div class="metric-val" id="sumNextForecast">-</div>
+      <div class="metric-sub">予測値</div>
+    </div>
+  </div>
+
+  <div class="section-label">契約ステータス</div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">ステータス別件数</span>
+      <span class="card-meta" id="statusTotalMeta">合計 -件</span>
+    </div>
+    <div class="status-grid">
+      <div class="status-cell"><div class="status-dot" style="background:#888780"></div><div><div class="status-name">ドラフト</div><div class="status-count" id="stDraft">0</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#378ADD"></div><div><div class="status-name">送信済み</div><div class="status-count" id="stSent">0</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#EF9F27"></div><div><div class="status-name">確認中</div><div class="status-count" id="stConfirming">0</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#639922"></div><div><div class="status-name">締結済み</div><div class="status-count" id="stClosed">0</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#E24B4A"></div><div><div class="status-name">差し戻し</div><div class="status-count" id="stRejected">0</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#D4537E"></div><div><div class="status-name">無効</div><div class="status-count" id="stVoid">0</div></div></div>
+    </div>
+    <div style="position:relative; width:100%; height:200px;">
+      <canvas id="statusChart" role="img" aria-label="契約ステータス別ドーナツグラフ">締結済み89、送信済み23、ドラフト18、確認中12、差し戻し4、無効2</canvas>
+    </div>
+  </div>
+
+  <div class="section-label">推移</div>
+  <div class="charts-row">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header">
+        <span class="card-title">契約件数の推移</span>
+        <div class="period-toggle" id="countPeriod">
+          <button class="period-btn" onclick="setPeriod('count',3,this)">3ヶ月</button>
+          <button class="period-btn active" onclick="setPeriod('count',6,this)">6ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('count',12,this)">12ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('count',24,this)">2年</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-sq" style="background:#185FA5"></span>新規締結</span>
+        <span class="legend-item">
+          <span class="legend-line" style="border-color:#B5D4F4; border-top-style:dashed;">
+            <span style="display:block; width:5px; height:5px; border-radius:50%; background:#B5D4F4; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></span>
+          </span>
+          送信
+        </span>
+      </div>
+      <div style="position:relative; width:100%; height:200px;">
+        <canvas id="countChart" role="img" aria-label="月次契約件数推移">月次の新規締結数と送信数の推移</canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header">
+        <span class="card-title">売上の推移</span>
+        <div class="period-toggle" id="revPeriod">
+          <button class="period-btn" onclick="setPeriod('rev',3,this)">3ヶ月</button>
+          <button class="period-btn active" onclick="setPeriod('rev',6,this)">6ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('rev',12,this)">12ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('rev',24,this)">2年</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-sq" style="background:#0F6E56"></span>確定売上</span>
+        <span class="legend-item">
+          <span class="legend-line" style="border-color:#9FE1CB; border-top-style:dashed;">
+            <span style="display:block; width:5px; height:5px; border-radius:50%; background:#9FE1CB; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></span>
+          </span>
+          見込み
+        </span>
+      </div>
+      <div style="position:relative; width:100%; height:200px;">
+        <canvas id="revenueChart" role="img" aria-label="月次売上推移">月次の確定売上と見込み売上の推移</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:1.5rem">リマインド</div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">送信済み契約の経過日数</span>
+      <span class="card-meta" id="reminderMeta">-</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable">
+        <thead><tr><th>顧客名</th><th>相手先</th><th>送信日</th><th>経過</th><th>金額</th><th>流入チャネル</th></tr></thead>
+        <tbody id="tbody-reminder"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-label">売上予測</div>
+  <div class="forecast-row">
+    <div class="card" style="margin-bottom:0">
+      <div class="forecast-period" id="fcThisPeriod">今期</div>
+      <div class="forecast-amount" id="fcThisTotal">-</div>
+      <div class="forecast-bar"><div class="forecast-fill" id="fcThisBar" style="width:0%; background:#185FA5;"></div></div>
+      <div class="forecast-breakdown">
+        <div class="breakdown-item">確定<br><span class="breakdown-val" id="fcThisConfirmed">-</span></div>
+        <div class="breakdown-item">進行中<br><span class="breakdown-val" id="fcThisProgress">-</span></div>
+        <div class="breakdown-item">見込み<br><span class="breakdown-val" id="fcThisPotential">-</span></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="forecast-period" id="fcNextPeriod">来期</div>
+      <div class="forecast-amount" id="fcNextTotal">-</div>
+      <div class="forecast-bar"><div class="forecast-fill" id="fcNextBar" style="width:0%; background:#0F6E56;"></div></div>
+      <div class="forecast-breakdown">
+        <div class="breakdown-item">継続更新<br><span class="breakdown-val" id="fcNextRenewal">-</span></div>
+        <div class="breakdown-item">新規見込み<br><span class="breakdown-val" id="fcNextNew">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">現在サンプルデータを表示しています。freee サイン または Adobe Sign と連携するとリアルタイムデータが反映されます。</div>
+
+
+      </main>
+    </div>
+
+    <!-- パイプラインビュー -->
+    <div class="view" id="view-pipeline">
+      <main class="main">
+
+
+  <div class="section-label">パイプライン サマリー</div>
+  <div class="funnel-row">
+    <div class="funnel-cell" style="background:linear-gradient(135deg,#378ADD,#185FA5)">
+      <div class="funnel-name">問い合わせ</div>
+      <div class="funnel-num" id="funnelInquiry">0</div>
+      <div class="funnel-rate" id="funnelInquiryRate"></div>
+    </div>
+    <div class="funnel-cell" style="background:linear-gradient(135deg,#8E6FC8,#6B4FA3)">
+      <div class="funnel-name">面談</div>
+      <div class="funnel-num" id="funnelMeeting">0</div>
+      <div class="funnel-rate" id="funnelMeetingRate"></div>
+    </div>
+    <div class="funnel-cell" style="background:linear-gradient(135deg,#2E9E7E,#0F6E56)">
+      <div class="funnel-name">契約</div>
+      <div class="funnel-num" id="funnelContract">0</div>
+      <div class="funnel-rate" id="funnelContractRate"></div>
+    </div>
+  </div>
+
+  <!-- 問い合わせ -->
+  <div class="section-label">ステージ別 顧客一覧</div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><span class="stage-badge stage-inquiry">問い合わせ</span></span>
+      <div class="header-controls">
+        <div class="date-filter">
+          <label>初回連絡日</label>
+          <input type="date" id="inquiry-from" onchange="renderInquiry()" aria-label="問い合わせ 開始日">
+          <span>〜</span>
+          <input type="date" id="inquiry-to" onchange="renderInquiry()" aria-label="問い合わせ 終了日">
+          <button class="clear-btn" onclick="clearDateFilter('inquiry')">クリア</button>
+        </div>
+        <div class="filter-toggle" onclick="toggleFilter('inquiry', this)">
+          <span>移行済みも表示</span>
+          <span class="switch" id="sw-inquiry"></span>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable">
+        <thead><tr>
+          <th>顧客名</th><th>代表者名</th><th>初回連絡日</th><th>事業形態</th><th>流入チャネル</th>
+          <th>電話番号</th><th>メール</th><th>初回返信日</th><th>経過</th><th>面談移行</th><th>備考</th>
+        </tr></thead>
+        <tbody id="tbody-inquiry"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 面談 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><span class="stage-badge stage-meeting">面談</span></span>
+      <div class="header-controls">
+        <div class="date-filter">
+          <label>面談日</label>
+          <input type="date" id="meeting-from" onchange="renderMeeting()" aria-label="面談 開始日">
+          <span>〜</span>
+          <input type="date" id="meeting-to" onchange="renderMeeting()" aria-label="面談 終了日">
+          <button class="clear-btn" onclick="clearDateFilter('meeting')">クリア</button>
+        </div>
+        <div class="filter-toggle" onclick="toggleFilter('meeting', this)">
+          <span>移行済みも表示</span>
+          <span class="switch" id="sw-meeting"></span>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable">
+        <thead><tr>
+          <th>顧客名</th><th>代表者名</th><th>事業形態</th><th>流入チャネル</th><th>面談日</th><th>見積送信日</th><th>見積金額(年額)</th>
+          <th>経過</th><th>電話番号</th><th>メール</th><th>備考</th>
+        </tr></thead>
+        <tbody id="tbody-meeting"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 契約 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><span class="stage-badge stage-contract">契約</span></span>
+      <div class="header-controls">
+        <div class="date-filter">
+          <label>契約書送信日</label>
+          <input type="date" id="contract-from" onchange="renderContract()" aria-label="契約 開始日">
+          <span>〜</span>
+          <input type="date" id="contract-to" onchange="renderContract()" aria-label="契約 終了日">
+          <button class="clear-btn" onclick="clearDateFilter('contract')">クリア</button>
+        </div>
+        <div class="filter-toggle" onclick="toggleFilter('contract', this)">
+          <span>未締結のみ→全件表示</span>
+          <span class="switch" id="sw-contract"></span>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable">
+        <thead><tr>
+          <th>顧客名</th><th>代表者名</th><th>事業形態</th><th>流入チャネル</th><th>契約書送信日</th><th>契約金額(年額)</th>
+          <th>経過</th><th>契約日</th><th>電話番号</th><th>メール</th><th>備考</th>
+        </tr></thead>
+        <tbody id="tbody-contract"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 流入チャネル分析 -->
+  <div class="section-label">流入チャネル分析</div>
+  <div class="analytics-row">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><span class="card-title">流入チャネル比率</span></div>
+      <div style="position:relative; width:100%; height:220px;">
+        <canvas id="channelPie" role="img" aria-label="流入チャネル比率の円グラフ"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><span class="card-title">チャネル別 成約率</span></div>
+      <div style="position:relative; width:100%; height:220px;">
+        <canvas id="channelRate" role="img" aria-label="チャネル別成約率の棒グラフ"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><span class="card-title">チャネル別 平均契約金額</span></div>
+      <div style="position:relative; width:100%; height:220px;">
+        <canvas id="channelAvg" role="img" aria-label="チャネル別平均契約金額の棒グラフ"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">現在サンプルデータを表示しています。スプレッドシート（1顧客＝1行 / stage列で管理）と連携すると実データが反映されます。</div>
+
+
+      </main>
+    </div>
+
+    <!-- 分析ビュー（パイプラインのチャネル分析を別ページにも表示） -->
+    <div class="view" id="view-analytics">
+      <main class="main">
+        <div class="section-label">流入チャネル分析</div>
+        <div class="analytics-row">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header"><span class="card-title">流入チャネル比率</span></div>
+            <div style="position:relative; width:100%; height:240px;"><canvas id="channelPie2" role="img" aria-label="流入チャネル比率"></canvas></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header"><span class="card-title">チャネル別 成約率</span></div>
+            <div style="position:relative; width:100%; height:240px;"><canvas id="channelRate2" role="img" aria-label="チャネル別成約率"></canvas></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header"><span class="card-title">チャネル別 平均契約金額</span></div>
+            <div style="position:relative; width:100%; height:240px;"><canvas id="channelAvg2" role="img" aria-label="チャネル別平均契約金額"></canvas></div>
+          </div>
+        </div>
+        <div class="notice">流入チャネル分析は営業パイプラインのデータを集計しています。</div>
+      </main>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ===== ビュー切替 =====
+const viewTitles = { overview: '契約サマリー', pipeline: '営業パイプライン', analytics: '流入チャネル分析' };
+let chartsInit = { overview: false, pipeline: false, analytics: false };
+function switchView(view, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('topbarTitle').textContent = viewTitles[view];
+  closeSidebar();
+  // チャートはタブ表示後に初期化（非表示状態だとサイズ0になるため）
+  initCharts(view);
+}
+function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); }
+
+function setSource(btn) {
+  document.querySelectorAll('.source-badge').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ===== 概要ビューのロジック =====
+// 概要ビュー：データとチャート変数（グローバル）
+// 概要ビュー：customersから月次集計（24ヶ月分）。customersは後方で定義されるため関数内で参照
+let ovMonthData = null; // { months:[], closedCount:[], sentCount:[], confirmedRev:[], forecastRev:[] }
+const ovScaleX = { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780', autoSkip: false, maxRotation: 0 } };
+const ovScaleY = { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true };
+let countChart = null, revenueChart = null;
+
+function buildMonthData() {
+  // 直近24ヶ月のラベルを生成（今日基準）
+  const base = new Date('2025-05-30');
+  const months = [], keys = [];
+  for (let i = 23; i >= 0; i--) {
+    const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    const y = dt.getFullYear(), m = dt.getMonth() + 1;
+    keys.push(y + '-' + String(m).padStart(2, '0'));
+    months.push((m === 1 ? (String(y).slice(2) + '年') : '') + m + '月');
+  }
+  const closedCount = keys.map(() => 0);
+  const sentCount = keys.map(() => 0);
+  const confirmedRev = keys.map(() => 0);
+  const keyIndex = {}; keys.forEach((k, i) => keyIndex[k] = i);
+
+  customers.forEach(c => {
+    // 締結（契約日）→ 新規締結件数 & 確定売上
+    if (c.contractDate) {
+      const k = c.contractDate.slice(0, 7);
+      if (k in keyIndex) { closedCount[keyIndex[k]]++; confirmedRev[keyIndex[k]] += (c.contractAmt || 0) / 1000; }
+    }
+    // 契約書送信 → 送信件数
+    if (c.contractSentDate) {
+      const k = c.contractSentDate.slice(0, 7);
+      if (k in keyIndex) sentCount[keyIndex[k]]++;
+    }
+  });
+  // 見込み売上 = 確定 + 進行中（見積済み・未締結）の按分。簡易に確定の1.2倍をトレンドとして表示
+  const forecastRev = confirmedRev.map((v, i) => Math.round((v + sentCount[i] * 1.0) * 10) / 10);
+  ovMonthData = { months, closedCount, sentCount, confirmedRev: confirmedRev.map(v => Math.round(v * 10) / 10), forecastRev };
+}
+
+function setPeriod(chartKey, months, btn) {
+  const toggleId = chartKey === 'count' ? 'countPeriod' : 'revPeriod';
+  document.querySelectorAll('#' + toggleId + ' .period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!ovMonthData) return;
+  const labels = ovMonthData.months.slice(-months);
+  if (chartKey === 'count') {
+    if (!countChart) return;
+    countChart.data.labels = labels;
+    countChart.data.datasets[0].data = ovMonthData.closedCount.slice(-months);
+    countChart.data.datasets[1].data = ovMonthData.sentCount.slice(-months);
+    countChart.update();
+  } else {
+    if (!revenueChart) return;
+    revenueChart.data.labels = labels;
+    revenueChart.data.datasets[0].data = ovMonthData.confirmedRev.slice(-months);
+    revenueChart.data.datasets[1].data = ovMonthData.forecastRev.slice(-months);
+    revenueChart.update();
+  }
+}
+
+// 概要サマリー（カード・ステータス・売上予測）をcustomersから集計して描画
+function renderOverviewSummary() {
+  const FY = 2025; // 今期（12月決算）
+  const closed = customers.filter(c => c.contractDate);
+  // 今期/来期の締結
+  const thisFY = closed.filter(c => +c.contractDate.slice(0,4) === FY);
+  const thisConfirmed = thisFY.reduce((s,c) => s + (c.contractAmt||0), 0);
+  // 進行中（契約書送信済み・未締結）の金額
+  const inProgress = customers.filter(c => c.contractSentDate && !c.contractDate);
+  const progressAmt = inProgress.reduce((s,c) => s + (c.contractAmt||0), 0);
+  // 見込み（面談ステージで見積済み・未送信）
+  const potential = customers.filter(c => c.stage === 'meeting' && c.quoteAmt && !c.contractSentDate);
+  const potentialAmt = potential.reduce((s,c) => s + (c.quoteAmt||0), 0);
+
+  const thisForecast = thisConfirmed + progressAmt + potentialAmt;
+  // 来期見込み：今期締結の継続更新(80%想定) + 進行中・見込みの一部
+  const renewal = Math.round(thisConfirmed * 0.8);
+  const newExpect = Math.round((progressAmt + potentialAmt) * 1.3);
+  const nextForecast = renewal + newExpect;
+
+  // 締結待ち（契約書送信済み・未締結）
+  const pending = inProgress.length;
+  const pendingDays = inProgress.map(c => daysSince(c.contractSentDate)).filter(x => x !== null);
+  const avgPending = pendingDays.length ? Math.round(pendingDays.reduce((a,b)=>a+b,0)/pendingDays.length*10)/10 : 0;
+  const reminder = inProgress.filter(c => daysSince(c.contractSentDate) >= 14).length;
+
+  const fmt = n => n.toLocaleString() + '千円';
+  document.getElementById('sumTotalContracts').textContent = closed.length;
+  document.getElementById('sumTotalDelta').textContent = '累計締結';
+  document.getElementById('sumThisConfirmed').textContent = fmt(thisConfirmed);
+  document.getElementById('sumThisDelta').textContent = FY + '年締結分';
+  document.getElementById('sumPending').textContent = pending;
+  document.getElementById('sumPendingSub').textContent = '平均 ' + avgPending + '日経過';
+  document.getElementById('sumReminder').textContent = reminder;
+  document.getElementById('sumThisForecast').textContent = fmt(thisForecast);
+  document.getElementById('sumNextForecast').textContent = fmt(nextForecast);
+
+  // ステータス内訳（締結済み + contractStatus別 + ドラフト=見積前の見込み）
+  const stCount = { 'ドラフト':0, '送信済み':0, '確認中':0, '締結済み':0, '差し戻し':0, '無効':0 };
+  customers.forEach(c => {
+    if (c.contractStatus && c.contractStatus in stCount) stCount[c.contractStatus]++;
+  });
+  document.getElementById('stDraft').textContent = stCount['ドラフト'];
+  document.getElementById('stSent').textContent = stCount['送信済み'];
+  document.getElementById('stConfirming').textContent = stCount['確認中'];
+  document.getElementById('stClosed').textContent = stCount['締結済み'];
+  document.getElementById('stRejected').textContent = stCount['差し戻し'];
+  document.getElementById('stVoid').textContent = stCount['無効'];
+  const stTotal = Object.values(stCount).reduce((a,b)=>a+b,0);
+  document.getElementById('statusTotalMeta').textContent = '合計 ' + stTotal + '件';
+
+  // 売上予測
+  document.getElementById('fcThisPeriod').textContent = FY + '年1月〜12月（今期）';
+  document.getElementById('fcNextPeriod').textContent = (FY+1) + '年1月〜12月（来期）';
+  document.getElementById('fcThisTotal').textContent = fmt(thisForecast);
+  document.getElementById('fcThisConfirmed').textContent = fmt(thisConfirmed);
+  document.getElementById('fcThisProgress').textContent = fmt(progressAmt);
+  document.getElementById('fcThisPotential').textContent = fmt(potentialAmt);
+  document.getElementById('fcThisBar').style.width = Math.min(100, Math.round(thisConfirmed/thisForecast*100 || 0)) + '%';
+  document.getElementById('fcNextTotal').textContent = fmt(nextForecast);
+  document.getElementById('fcNextRenewal').textContent = fmt(renewal);
+  document.getElementById('fcNextNew').textContent = fmt(newExpect);
+  document.getElementById('fcNextBar').style.width = Math.min(100, Math.round(renewal/nextForecast*100 || 0)) + '%';
+
+  // リマインドテーブル（契約書送信済み・未締結を経過日数降順で）
+  const reminderRows = inProgress
+    .map(c => ({ ...c, days: daysSince(c.contractSentDate) }))
+    .sort((a,b) => b.days - a.days);
+  const over14 = reminderRows.filter(c => c.days >= 14).length;
+  document.getElementById('reminderMeta').textContent = '14日以上 ' + over14 + '件';
+  document.getElementById('tbody-reminder').innerHTML = reminderRows.map(c => {
+    const cls = c.days >= 14 ? 'days-danger' : (c.days >= 7 ? 'days-warn' : 'days-ok');
+    return '<tr><td>' + c.name + '</td><td>' + c.rep + '</td><td>' + fmtDate(c.contractSentDate) + '</td>' +
+      '<td><span class="days-badge ' + cls + '">' + c.days + '日</span></td>' +
+      '<td>' + (c.contractAmt||0).toLocaleString() + '千円</td><td><span class="pill">' + c.channel + '</span></td></tr>';
+  }).join('') || '<tr><td colspan="6" style="color:var(--text-faint);text-align:center;">送信済み・未締結の契約はありません</td></tr>';
+
+  return stCount;
+}
+
+function initOverviewCharts() {
+  buildMonthData();
+  const stCount = renderOverviewSummary();
+
+  countChart = new Chart(document.getElementById('countChart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: '新規締結', data: [], backgroundColor: '#185FA5', borderRadius: 3, order: 2 },
+      { label: '送信', data: [], type: 'line', borderColor: '#B5D4F4', backgroundColor: 'transparent',
+        borderWidth: 2, borderDash: [4,2], tension: 0.3, pointRadius: 4,
+        pointBackgroundColor: '#B5D4F4', pointBorderColor: '#B5D4F4', order: 1 }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: ovScaleX, y: ovScaleY } }
+  });
+  revenueChart = new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: '確定売上', data: [], backgroundColor: '#0F6E56', borderRadius: 3, order: 2 },
+      { label: '見込み', data: [], type: 'line', borderColor: '#9FE1CB', backgroundColor: 'transparent',
+        borderWidth: 2, borderDash: [4,2], tension: 0.3, pointRadius: 4,
+        pointBackgroundColor: '#9FE1CB', pointBorderColor: '#9FE1CB', order: 1 }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: ovScaleX, y: { ...ovScaleY, ticks: { ...ovScaleY.ticks, callback: v => v + 'M' } } } }
+  });
+  setPeriod('count', 6, document.querySelector('#countPeriod .period-btn:nth-child(2)'));
+  setPeriod('rev',   6, document.querySelector('#revPeriod .period-btn:nth-child(2)'));
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: ['締結済み','送信済み','ドラフト','確認中','差し戻し','無効'],
+      datasets: [{ data: [stCount['締結済み'],stCount['送信済み'],stCount['ドラフト'],stCount['確認中'],stCount['差し戻し'],stCount['無効']], backgroundColor: ['#639922','#378ADD','#888780','#EF9F27','#E24B4A','#D4537E'], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } }
+  });
+}
+
+// ===== パイプライン/分析ビューのロジック =====
+
+// ===== サンプルデータ：1顧客=1レコード、stageで現在地を管理 =====
+// stage: 'inquiry' | 'meeting' | 'contract'
+// contractClosed: 契約完了したか（契約日が入っているか）
+const today = new Date('2025-05-30');
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  return Math.floor((today - new Date(dateStr)) / 86400000);
+}
+function daysBadge(d) {
+  if (d === null) return '<span class="pill">-</span>';
+  const cls = d >= 14 ? 'days-danger' : (d >= 7 ? 'days-warn' : 'days-ok');
+  return '<span class="days-badge ' + cls + '">' + d + '日</span>';
+}
+function yen(man) { return man === null || man === undefined ? '-' : man.toLocaleString() + '千円'; }
+function fmtDate(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '/' + m + '/' + day;
+}
+
+const customers = [
+  { name:'株式会社風製作所', rep:'海野 一郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-4517-1614', email:'user0@example.com', note:'複数年契約検討中', firstContact:'2024-10-25', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社木村ホールディングス', rep:'田中 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'03-4622-1763', email:'user1@example.com', note:'予算確認待ち', firstContact:'2024-07-18', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社渡辺ホールディングス', rep:'空 涼', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'05-2596-9974', email:'user2@example.com', note:'再連絡予定', firstContact:'2024-09-18', firstReply:'2024-09-23', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'川上エージェンシー', rep:'海野 翔', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-3945-4999', email:'user3@example.com', note:'見積調整中', firstContact:'2024-12-11', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社日向工業', rep:'中村 星', stage:'inquiry', channel:'MF', biz:'個人', contractStatus:null, tel:'04-6604-3490', email:'user4@example.com', note:'競合検討中', firstContact:'2024-11-24', firstReply:'2024-11-28', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社緑川企画', rep:'日向 青', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'07-8474-2126', email:'user5@example.com', note:'', firstContact:'2025-01-21', firstReply:'2025-01-24', meetingDate:'2025-01-31', quoteDate:'2025-02-03', quoteAmt:1240, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'星野', rep:'西野 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-2918-9088', email:'user6@example.com', note:'見積調整中', firstContact:'2024-05-04', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'伊藤デザイン', rep:'縁 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-5552-3243', email:'user7@example.com', note:'複数年契約検討中', firstContact:'2024-07-02', firstReply:'2024-07-07', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社加藤工業', rep:'山本 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-4822-1197', email:'user8@example.com', note:'見積調整中', firstContact:'2024-06-26', firstReply:'2024-07-01', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林ファーム', rep:'月見 一郎', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'06-7428-7521', email:'user9@example.com', note:'押印待ち', firstContact:'2024-06-20', firstReply:'2024-06-21', meetingDate:'2024-07-10', quoteDate:'2024-07-13', quoteAmt:1000, contractSentDate:'2024-07-24', contractAmt:1000, contractDate:'2024-07-31' },
+  { name:'株式会社海野パートナーズ', rep:'鈴木 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'09-4407-7164', email:'user10@example.com', note:'', firstContact:'2024-09-21', firstReply:'2024-09-24', meetingDate:'2024-10-10', quoteDate:'2024-10-20', quoteAmt:1060, contractSentDate:'2024-11-09', contractAmt:1060, contractDate:'2024-11-27' },
+  { name:'有限会社北野デザイン', rep:'光 太郎', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-9654-6926', email:'user11@example.com', note:'押印待ち', firstContact:'2024-12-01', firstReply:'2024-12-06', meetingDate:'2024-12-25', quoteDate:'2025-01-01', quoteAmt:1940, contractSentDate:'2025-01-14', contractAmt:1940, contractDate:'2025-01-23' },
+  { name:'有限会社木村パートナーズ', rep:'松本 大', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'09-7564-4714', email:'user12@example.com', note:'', firstContact:'2024-12-12', firstReply:'2024-12-16', meetingDate:'2024-12-20', quoteDate:'2024-12-23', quoteAmt:1300, contractSentDate:'2025-01-05', contractAmt:1300, contractDate:'2025-01-20' },
+  { name:'有限会社伊藤物産', rep:'渡辺 大', stage:'contract', channel:'freee', biz:'個人', contractStatus:'送信済み', tel:'06-4222-6533', email:'user13@example.com', note:'複数年契約検討中', firstContact:'2024-06-10', firstReply:'2024-06-15', meetingDate:'2024-06-18', quoteDate:'2024-06-28', quoteAmt:1440, contractSentDate:'2025-05-25', contractAmt:1440, contractDate:null },
+  { name:'合同会社金田商会', rep:'伊藤 純', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-7576-2391', email:'user14@example.com', note:'予算確認待ち', firstContact:'2024-08-13', firstReply:'2024-08-15', meetingDate:'2024-08-21', quoteDate:'2024-08-26', quoteAmt:1100, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社加藤ラボ', rep:'大地 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'03-1233-2683', email:'user15@example.com', note:'見積調整中', firstContact:'2024-08-11', firstReply:'2024-08-13', meetingDate:'2024-08-25', quoteDate:'2024-08-31', quoteAmt:860, contractSentDate:'2024-09-14', contractAmt:860, contractDate:'2024-09-28' },
+  { name:'有限会社西野ホールディングス', rep:'光 星', stage:'contract', channel:'MF', biz:'個人', contractStatus:'送信済み', tel:'09-9219-3142', email:'user16@example.com', note:'', firstContact:'2023-11-04', firstReply:'2023-11-09', meetingDate:'2023-11-26', quoteDate:'2023-12-11', quoteAmt:1180, contractSentDate:'2025-05-03', contractAmt:1180, contractDate:null },
+  { name:'渡辺ラボ', rep:'田中 大', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5537-1691', email:'user17@example.com', note:'', firstContact:'2024-05-28', firstReply:'2024-06-02', meetingDate:'2024-06-05', quoteDate:'2024-06-20', quoteAmt:1420, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社森エージェンシー', rep:'南 青', stage:'contract', channel:'BP', biz:'個人', contractStatus:'送信済み', tel:'07-5057-9572', email:'user18@example.com', note:'再連絡予定', firstContact:'2024-10-07', firstReply:'2024-10-10', meetingDate:'2024-10-21', quoteDate:'2024-10-31', quoteAmt:2320, contractSentDate:'2025-05-27', contractAmt:2320, contractDate:null },
+  { name:'株式会社加藤企画', rep:'加藤 守', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-8663-4597', email:'user19@example.com', note:'複数年契約検討中', firstContact:'2024-05-15', firstReply:'2024-05-16', meetingDate:'2024-06-07', quoteDate:'2024-06-12', quoteAmt:3040, contractSentDate:'2024-06-30', contractAmt:3040, contractDate:'2024-07-08' },
+  { name:'株式会社緑川ラボ', rep:'西野 緑', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-1296-7297', email:'user20@example.com', note:'競合検討中', firstContact:'2024-11-21', firstReply:'2024-11-26', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社伊藤フーズ', rep:'森 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'09-3974-5430', email:'user21@example.com', note:'競合検討中', firstContact:'2024-03-30', firstReply:'2024-04-03', meetingDate:'2024-04-15', quoteDate:'2024-04-24', quoteAmt:900, contractSentDate:'2025-05-22', contractAmt:900, contractDate:null },
+  { name:'株式会社森', rep:'伊藤 守', stage:'meeting', channel:'WEB', biz:'個人', contractStatus:null, tel:'03-4643-2091', email:'user22@example.com', note:'見積調整中', firstContact:'2024-02-27', firstReply:'2024-02-28', meetingDate:'2024-03-16', quoteDate:'2024-03-27', quoteAmt:1460, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社吉田フーズ', rep:'田中 健', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-6111-5997', email:'user23@example.com', note:'', firstContact:'2024-11-16', firstReply:'2024-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社佐藤', rep:'鈴木 涼', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'07-8778-5025', email:'user24@example.com', note:'再連絡予定', firstContact:'2024-12-21', firstReply:'2024-12-22', meetingDate:'2025-01-11', quoteDate:'2025-01-24', quoteAmt:1000, contractSentDate:'2025-02-10', contractAmt:1000, contractDate:'2025-02-25' },
+  { name:'合同会社未来企画', rep:'田中 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'03-2158-5187', email:'user25@example.com', note:'複数年契約検討中', firstContact:'2025-01-02', firstReply:'2025-01-03', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社池田商事', rep:'西野 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-5407-8304', email:'user26@example.com', note:'押印待ち', firstContact:'2024-05-03', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社佐藤システムズ', rep:'井上 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-1017-6494', email:'user27@example.com', note:'再連絡予定', firstContact:'2024-09-12', firstReply:'2024-09-16', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社加藤建設', rep:'川上 一郎', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'06-1368-5909', email:'user28@example.com', note:'', firstContact:'2023-12-09', firstReply:'2023-12-11', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'青空ソリューションズ', rep:'加藤 翔', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'送信済み', tel:'08-3371-1717', email:'user29@example.com', note:'', firstContact:'2025-01-29', firstReply:'2025-02-04', meetingDate:'2025-02-19', quoteDate:'2025-03-05', quoteAmt:3580, contractSentDate:'2025-05-27', contractAmt:3580, contractDate:null },
+  { name:'合同会社伊藤', rep:'佐藤 花子', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'08-6909-2718', email:'user30@example.com', note:'', firstContact:'2024-12-30', firstReply:'2025-01-03', meetingDate:'2025-01-07', quoteDate:'2025-01-20', quoteAmt:1040, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社光工業', rep:'北野 守', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-2219-5350', email:'user31@example.com', note:'', firstContact:'2023-11-16', firstReply:'2023-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社佐藤パートナーズ', rep:'松本 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'ドラフト', tel:'07-3415-6435', email:'user32@example.com', note:'再連絡予定', firstContact:'2024-08-13', firstReply:'2024-08-19', meetingDate:'2024-08-25', quoteDate:'2024-08-28', quoteAmt:1780, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'西野エージェンシー', rep:'中村 涼', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-2406-8748', email:'user33@example.com', note:'', firstContact:'2024-08-30', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社大関コンサル', rep:'井上 次郎', stage:'meeting', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-2479-3322', email:'user34@example.com', note:'競合検討中', firstContact:'2025-04-26', firstReply:'2025-04-29', meetingDate:'2025-05-08', quoteDate:'2025-05-20', quoteAmt:2280, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'未来', rep:'吉田 太郎', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'06-8385-7642', email:'user35@example.com', note:'資料送付済み', firstContact:'2025-02-01', firstReply:'2025-02-03', meetingDate:'2025-02-21', quoteDate:'2025-03-01', quoteAmt:620, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社山田システムズ', rep:'清水 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'03-7437-7392', email:'user36@example.com', note:'複数年契約検討中', firstContact:'2024-07-05', firstReply:'2024-07-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社池田サービス', rep:'林 守', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-9371-6170', email:'user37@example.com', note:'複数年契約検討中', firstContact:'2024-05-02', firstReply:'2024-05-05', meetingDate:'2024-05-23', quoteDate:'2024-05-26', quoteAmt:1340, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社田中興業', rep:'縁 花子', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'08-5689-8955', email:'user38@example.com', note:'', firstContact:'2024-09-13', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社清水フーズ', rep:'未来 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-8916-7461', email:'user39@example.com', note:'予算確認待ち', firstContact:'2024-06-07', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社縁商会', rep:'縁 星', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'04-9974-4152', email:'user40@example.com', note:'複数年契約検討中', firstContact:'2024-12-24', firstReply:'2024-12-26', meetingDate:'2025-01-03', quoteDate:'2025-01-11', quoteAmt:1080, contractSentDate:'2025-02-03', contractAmt:1080, contractDate:'2025-02-07' },
+  { name:'有限会社緑川商事', rep:'東 守', stage:'meeting', channel:'BP', biz:'個人', contractStatus:null, tel:'07-6900-3062', email:'user41@example.com', note:'複数年契約検討中', firstContact:'2024-03-17', firstReply:'2024-03-22', meetingDate:'2024-03-31', quoteDate:'2024-04-04', quoteAmt:3420, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社小林商事', rep:'金田 青', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-9025-1002', email:'user42@example.com', note:'', firstContact:'2025-03-09', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社木村サービス', rep:'加藤 三郎', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'09-8492-2392', email:'user43@example.com', note:'予算確認待ち', firstContact:'2024-04-12', firstReply:'2024-04-13', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林フーズ', rep:'光 星', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'08-2837-2629', email:'user44@example.com', note:'', firstContact:'2024-10-23', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社山田ラボ', rep:'橋本 緑', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'締結済み', tel:'05-6183-4970', email:'user45@example.com', note:'複数年契約検討中', firstContact:'2024-04-20', firstReply:'2024-04-22', meetingDate:'2024-04-28', quoteDate:'2024-05-07', quoteAmt:3580, contractSentDate:'2024-05-13', contractAmt:3580, contractDate:'2024-06-01' },
+  { name:'有限会社木村ソリューションズ', rep:'佐藤 永', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-7890-6936', email:'user46@example.com', note:'見積調整中', firstContact:'2024-07-18', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社橋本コンサル', rep:'木村 緑', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5342-5832', email:'user47@example.com', note:'', firstContact:'2024-03-14', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'田中パートナーズ', rep:'加藤 純', stage:'contract', channel:'MF', biz:'法人', contractStatus:'確認中', tel:'03-4488-1387', email:'user48@example.com', note:'予算確認待ち', firstContact:'2024-03-27', firstReply:'2024-03-29', meetingDate:'2024-04-05', quoteDate:'2024-04-10', quoteAmt:1600, contractSentDate:'2025-05-08', contractAmt:1600, contractDate:null },
+  { name:'佐藤システムズ', rep:'大関 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'05-8248-3773', email:'user49@example.com', note:'競合検討中', firstContact:'2025-02-24', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社大地コンサル', rep:'大関 力', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-6057-8085', email:'user50@example.com', note:'', firstContact:'2025-03-10', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社海野ソリューションズ', rep:'鈴木 星', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'04-7631-1666', email:'user51@example.com', note:'資料送付済み', firstContact:'2024-07-29', firstReply:'2024-08-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社海野フーズ', rep:'緑川 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'05-6185-5515', email:'user52@example.com', note:'複数年契約検討中', firstContact:'2025-02-01', firstReply:'2025-02-07', meetingDate:'2025-02-11', quoteDate:'2025-02-14', quoteAmt:2300, contractSentDate:'2025-03-06', contractAmt:2300, contractDate:'2025-03-24' },
+  { name:'合同会社東デザイン', rep:'山田 翔', stage:'contract', channel:'freee', biz:'個人', contractStatus:'締結済み', tel:'09-3479-4868', email:'user53@example.com', note:'資料送付済み', firstContact:'2024-12-25', firstReply:'2024-12-28', meetingDate:'2025-01-04', quoteDate:'2025-01-15', quoteAmt:700, contractSentDate:'2025-01-25', contractAmt:700, contractDate:'2025-01-31' },
+  { name:'渡辺工業', rep:'清水 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'04-2579-7898', email:'user54@example.com', note:'', firstContact:'2024-02-10', firstReply:'2024-02-16', meetingDate:'2024-02-23', quoteDate:'2024-02-29', quoteAmt:1080, contractSentDate:'2024-03-24', contractAmt:1080, contractDate:'2024-04-03' },
+  { name:'有限会社池田フーズ', rep:'空 守', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-5162-5265', email:'user55@example.com', note:'再連絡予定', firstContact:'2024-01-08', firstReply:'2024-01-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社高橋建設', rep:'清水 大', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'07-9623-4790', email:'user56@example.com', note:'資料送付済み', firstContact:'2024-09-25', firstReply:'2024-09-26', meetingDate:'2024-10-04', quoteDate:'2024-10-08', quoteAmt:600, contractSentDate:'2025-05-15', contractAmt:600, contractDate:null },
+  { name:'合同会社高橋企画', rep:'南 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'06-5258-1103', email:'user57@example.com', note:'', firstContact:'2023-10-21', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社加藤商事', rep:'井上 守', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'03-4333-1186', email:'user58@example.com', note:'競合検討中', firstContact:'2023-10-01', firstReply:'2023-10-05', meetingDate:'2023-10-14', quoteDate:'2023-10-26', quoteAmt:820, contractSentDate:'2023-11-01', contractAmt:820, contractDate:'2023-11-20' },
+  { name:'合同会社風工業', rep:'吉田 純', stage:'contract', channel:'BP', biz:'個人', contractStatus:'締結済み', tel:'08-5442-7713', email:'user59@example.com', note:'再連絡予定', firstContact:'2024-10-30', firstReply:'2024-11-05', meetingDate:'2024-11-08', quoteDate:'2024-11-15', quoteAmt:4120, contractSentDate:'2024-11-20', contractAmt:4120, contractDate:'2024-12-05' },
+  { name:'吉田興業', rep:'中村 次郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'06-6975-8551', email:'user60@example.com', note:'', firstContact:'2025-02-28', firstReply:'2025-03-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社南デザイン', rep:'加藤 力', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'05-3651-9538', email:'user61@example.com', note:'', firstContact:'2024-07-04', firstReply:'2024-07-05', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林商事', rep:'北野 永', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'03-7355-2413', email:'user62@example.com', note:'', firstContact:'2024-12-22', firstReply:'2024-12-27', meetingDate:'2025-01-04', quoteDate:'2025-01-17', quoteAmt:1300, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社空コンサル', rep:'佐藤 純', stage:'inquiry', channel:'BP', biz:'個人', contractStatus:null, tel:'07-3563-7284', email:'user63@example.com', note:'再連絡予定', firstContact:'2024-12-31', firstReply:'2025-01-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社青空製作所', rep:'大関 緑', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'07-6017-7882', email:'user64@example.com', note:'', firstContact:'2024-12-04', firstReply:'2024-12-06', meetingDate:'2024-12-23', quoteDate:'2025-01-02', quoteAmt:1640, contractSentDate:'2025-01-07', contractAmt:1640, contractDate:'2025-01-26' },
+  { name:'山本ソリューションズ', rep:'未来 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'03-3104-6874', email:'user65@example.com', note:'', firstContact:'2024-12-12', firstReply:'2024-12-13', meetingDate:'2025-01-05', quoteDate:'2025-01-16', quoteAmt:1940, contractSentDate:'2025-02-10', contractAmt:1940, contractDate:'2025-02-24' },
+  { name:'合同会社鈴木工業', rep:'月見 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'04-3156-9058', email:'user66@example.com', note:'', firstContact:'2025-01-30', firstReply:'2025-02-01', meetingDate:'2025-02-14', quoteDate:'2025-02-18', quoteAmt:2300, contractSentDate:'2025-03-03', contractAmt:2300, contractDate:'2025-03-15' },
+  { name:'合同会社川上フーズ', rep:'月見 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-7099-1603', email:'user67@example.com', note:'見積調整中', firstContact:'2025-02-13', firstReply:'2025-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社中村ファーム', rep:'田中 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'09-8422-9543', email:'user68@example.com', note:'', firstContact:'2024-02-16', firstReply:'2024-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社大関企画', rep:'空 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'05-6420-2333', email:'user69@example.com', note:'押印待ち', firstContact:'2024-12-19', firstReply:'2024-12-21', meetingDate:'2024-12-28', quoteDate:'2025-01-04', quoteAmt:1860, contractSentDate:'2025-01-29', contractAmt:1860, contractDate:'2025-02-15' },
+  { name:'有限会社月見興業', rep:'雲井 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'03-3163-9001', email:'user70@example.com', note:'資料送付済み', firstContact:'2024-03-25', firstReply:'2024-03-31', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社風物産', rep:'雲井 翔', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-3190-4345', email:'user71@example.com', note:'資料送付済み', firstContact:'2023-12-25', firstReply:'2023-12-29', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+];
+
+const stageOrder = { inquiry: 0, meeting: 1, contract: 2 };
+const filterState = { inquiry: false, meeting: false, contract: false };
+
+// 日付範囲フィルターのヘルパー
+function getDateRange(stage) {
+  const from = document.getElementById(stage + '-from');
+  const to = document.getElementById(stage + '-to');
+  return {
+    from: from && from.value ? from.value : null,
+    to: to && to.value ? to.value : null,
+  };
+}
+function inDateRange(dateStr, range) {
+  if (!range.from && !range.to) return true;
+  if (!dateStr) return false; // 範囲指定時、日付が無いレコードは除外
+  const d = dateStr.slice(0, 10);
+  if (range.from && d < range.from) return false;
+  if (range.to && d > range.to) return false;
+  return true;
+}
+function clearDateFilter(stage) {
+  document.getElementById(stage + '-from').value = '';
+  document.getElementById(stage + '-to').value = '';
+  if (stage === 'inquiry') renderInquiry();
+  if (stage === 'meeting') renderMeeting();
+  if (stage === 'contract') renderContract();
+}
+
+function renderInquiry() {
+  const show = filterState.inquiry;
+  const range = getDateRange('inquiry');
+  const rows = customers.filter(c => (show || c.stage === 'inquiry') && inDateRange(c.firstContact, range));
+  const html = rows.map(c => {
+    const moved = c.stage !== 'inquiry';
+    return '<tr class="' + (moved ? 'moved-row' : '') + '">' +
+      '<td>' + c.name + '</td><td>' + c.rep + '</td><td>' + fmtDate(c.firstContact) + '</td>' +
+      '<td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
+      '<td>' + c.tel + '</td><td>' + c.email + '</td><td>' + fmtDate(c.firstReply) + '</td>' +
+      '<td>' + daysBadge(daysSince(c.firstContact)) + '</td>' +
+      '<td>' + (stageOrder[c.stage] >= 1 ? '<span class="done-mark">済</span>' : '-') + '</td>' +
+      '<td>' + (c.note||'-') + '</td></tr>';
+  }).join('');
+  document.getElementById('tbody-inquiry').innerHTML = html || '<tr class="empty-row"><td colspan="11">該当する顧客はありません</td></tr>';
+}
+
+function renderMeeting() {
+  const show = filterState.meeting;
+  const range = getDateRange('meeting');
+  const rows = customers.filter(c => (show || c.stage === 'meeting') && stageOrder[c.stage] >= 1 && inDateRange(c.meetingDate, range));
+  const html = rows.map(c => {
+    const moved = c.stage !== 'meeting';
+    return '<tr class="' + (moved ? 'moved-row' : '') + '">' +
+      '<td>' + c.name + '</td><td>' + c.rep + '</td><td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
+      '<td>' + fmtDate(c.meetingDate) + '</td>' +
+      '<td>' + fmtDate(c.quoteDate) + '</td><td>' + yen(c.quoteAmt) + '</td>' +
+      '<td>' + daysBadge(daysSince(c.quoteDate)) + '</td>' +
+      '<td>' + c.tel + '</td><td>' + c.email + '</td><td>' + (c.note||'-') + '</td></tr>';
+  }).join('');
+  document.getElementById('tbody-meeting').innerHTML = html || '<tr class="empty-row"><td colspan="11">該当する顧客はありません</td></tr>';
+}
+
+function renderContract() {
+  const show = filterState.contract;
+  const range = getDateRange('contract');
+  // 契約セクション：デフォルトは未締結（contractDateなし）のみ、トグルONで締結済みも表示
+  const rows = customers.filter(c => c.stage === 'contract' && (show || !c.contractDate) && inDateRange(c.contractSentDate, range));
+  const html = rows.map(c => {
+    const closed = !!c.contractDate;
+    return '<tr class="' + (closed ? 'moved-row' : '') + '">' +
+      '<td>' + c.name + '</td><td>' + c.rep + '</td><td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
+      '<td>' + fmtDate(c.contractSentDate) + '</td>' +
+      '<td>' + yen(c.contractAmt) + '</td>' +
+      '<td>' + (closed ? '<span class="done-mark">締結済</span>' : daysBadge(daysSince(c.contractSentDate))) + '</td>' +
+      '<td>' + (c.contractDate ? fmtDate(c.contractDate) : '<span class="pill">未締結</span>') + '</td>' +
+      '<td>' + c.tel + '</td><td>' + c.email + '</td><td>' + (c.note||'-') + '</td></tr>';
+  }).join('');
+  document.getElementById('tbody-contract').innerHTML = html || '<tr class="empty-row"><td colspan="11">該当する顧客はありません</td></tr>';
+}
+
+function toggleFilter(stage, el) {
+  filterState[stage] = !filterState[stage];
+  el.querySelector('.switch').classList.toggle('on', filterState[stage]);
+  if (stage === 'inquiry') renderInquiry();
+  if (stage === 'meeting') renderMeeting();
+  if (stage === 'contract') renderContract();
+}
+
+// ===== ファネル集計 =====
+function renderFunnel() {
+  const inq = customers.length; // 全員が問い合わせを通過
+  const meet = customers.filter(c => stageOrder[c.stage] >= 1).length;
+  const cont = customers.filter(c => c.stage === 'contract' && c.contractDate).length;
+  document.getElementById('funnelInquiry').textContent = inq;
+  document.getElementById('funnelMeeting').textContent = meet;
+  document.getElementById('funnelContract').textContent = cont;
+  document.getElementById('funnelInquiryRate').textContent = '累計';
+  document.getElementById('funnelMeetingRate').textContent = '移行率 ' + Math.round(meet/inq*100) + '%';
+  document.getElementById('funnelContractRate').textContent = '成約率 ' + Math.round(cont/inq*100) + '%';
+}
+
+// ===== 流入チャネル分析 =====
+const channels = ['WEB','BP','MF','freee','紹介'];
+const channelColors = ['#185FA5','#EF9F27','#0F6E56','#6B4FA3','#E24B4A'];
+
+function channelStats() {
+  const stats = {};
+  channels.forEach(ch => stats[ch] = { total: 0, won: 0, amtSum: 0 });
+  customers.forEach(c => {
+    if (!stats[c.channel]) return;
+    stats[c.channel].total++;
+    if (c.stage === 'contract' && c.contractDate) {
+      stats[c.channel].won++;
+      stats[c.channel].amtSum += (c.contractAmt || 0);
+    }
+  });
+  return stats;
+}
+
+const cStats = channelStats();
+const scaleX = { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' } };
+const scaleY = { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true };
+
+
+
+
+
+
+
+// 初期描画
+
+
+
+
+// パイプラインビューのチャート
+function initPipelineCharts() {
+new Chart(document.getElementById('channelPie'), {
+  type: 'doughnut',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total), backgroundColor: channelColors, borderWidth: 0, hoverOffset: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, color: '#888780', padding: 10, boxWidth: 10 } } } }
+});
+new Chart(document.getElementById('channelRate'), {
+  type: 'bar',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total ? Math.round(cStats[ch].won/cStats[ch].total*100) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v + '%' }, max: 100 } } }
+});
+new Chart(document.getElementById('channelAvg'), {
+  type: 'bar',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].won ? Math.round(cStats[ch].amtSum/cStats[ch].won) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v.toLocaleString() + '千円' } } } }
+});
+}
+// 分析ビューのチャート（同じ集計を別canvasに）
+function initAnalyticsCharts() {
+new Chart(document.getElementById('channelPie2'), {
+  type: 'doughnut',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total), backgroundColor: channelColors, borderWidth: 0, hoverOffset: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, color: '#888780', padding: 10, boxWidth: 10 } } } }
+});
+new Chart(document.getElementById('channelRate2'), {
+  type: 'bar',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total ? Math.round(cStats[ch].won/cStats[ch].total*100) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v + '%' }, max: 100 } } }
+});
+new Chart(document.getElementById('channelAvg2'), {
+  type: 'bar',
+  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].won ? Math.round(cStats[ch].amtSum/cStats[ch].won) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v.toLocaleString() + '千円' } } } }
+});
+}
+// ===== チャート初期化の制御 =====
+function initCharts(view) {
+  if (view === 'overview' && !chartsInit.overview) { initOverviewCharts(); chartsInit.overview = true; }
+  if (view === 'pipeline' && !chartsInit.pipeline) { initPipelineCharts(); chartsInit.pipeline = true; }
+  if (view === 'analytics' && !chartsInit.analytics) { initAnalyticsCharts(); chartsInit.analytics = true; }
+}
+
+// 初期表示（概要）
+initCharts('overview');
+// テーブルは常時描画しておく（パイプラインタブの表は軽いので先に描画）
+renderInquiry(); renderMeeting(); renderContract(); renderFunnel();
+</script>
+</body>
+</html>
