@@ -47,12 +47,9 @@
   .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
   .card-title { font-size: 13px; font-weight: 500; }
   .card-meta { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
-
-  /* Period toggle */
   .period-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; }
   .period-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
   .period-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
   @media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
   .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 16px; }
@@ -81,6 +78,8 @@
   .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
   .legend-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-line { width: 18px; height: 2px; border-top: 2px dashed; flex-shrink: 0; position: relative; }
+  .legend-line::after { content: ''; width: 5px; height: 5px; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
   .notice { font-size: 11px; color: var(--text-faint); text-align: center; padding: 16px; border-top: 1px solid var(--border); margin-top: 2rem; }
   @media (max-width: 600px) { .header { padding: 0 1rem; } .main { padding: 1rem 1rem 2rem; } .last-updated { display: none; } .metric-grid { grid-template-columns: 1fr 1fr; } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -114,12 +113,36 @@
 
   <div class="section-label">サマリー</div>
   <div class="metric-grid">
-    <div class="metric-cell"><div class="metric-label">総契約数</div><div class="metric-val">148</div><div class="metric-delta delta-up">↑ 12 先月比</div></div>
-    <div class="metric-cell"><div class="metric-label">今期売上（確定）</div><div class="metric-val">¥42.8M</div><div class="metric-delta delta-up">↑ 8.3%</div></div>
-    <div class="metric-cell"><div class="metric-label">締結待ち</div><div class="metric-val">23</div><div class="metric-sub">平均 6.4日経過</div></div>
-    <div class="metric-cell"><div class="metric-label">要リマインド</div><div class="metric-val danger">7</div><div class="metric-sub">14日以上経過</div></div>
-    <div class="metric-cell"><div class="metric-label">今期見込み売上</div><div class="metric-val">¥61.2M</div><div class="metric-sub">確定 + 進行中</div></div>
-    <div class="metric-cell"><div class="metric-label">来期見込み売上</div><div class="metric-val">¥74.5M</div><div class="metric-sub">予測値</div></div>
+    <div class="metric-cell">
+      <div class="metric-label">総契約数</div>
+      <div class="metric-val">148</div>
+      <div class="metric-delta delta-up">↑ 12 先月比</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">今期売上（確定）</div>
+      <div class="metric-val">42,800千円</div>
+      <div class="metric-delta delta-up">↑ 8.3%</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">締結待ち</div>
+      <div class="metric-val">23</div>
+      <div class="metric-sub">平均 6.4日経過</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">要リマインド</div>
+      <div class="metric-val danger">7</div>
+      <div class="metric-sub">14日以上経過</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">今期見込み売上</div>
+      <div class="metric-val">61,200千円</div>
+      <div class="metric-sub">確定 + 進行中</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">来期見込み売上</div>
+      <div class="metric-val">74,500千円</div>
+      <div class="metric-sub">予測値</div>
+    </div>
   </div>
 
   <div class="section-label">契約ステータス</div>
@@ -155,7 +178,12 @@
       </div>
       <div class="legend">
         <span class="legend-item"><span class="legend-sq" style="background:#185FA5"></span>新規締結</span>
-        <span class="legend-item"><span class="legend-sq" style="background:#B5D4F4"></span>送信</span>
+        <span class="legend-item">
+          <span class="legend-line" style="border-color:#B5D4F4; border-top-style:dashed;">
+            <span style="display:block; width:5px; height:5px; border-radius:50%; background:#B5D4F4; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></span>
+          </span>
+          送信
+        </span>
       </div>
       <div style="position:relative; width:100%; height:200px;">
         <canvas id="countChart" role="img" aria-label="月次契約件数推移">月次の新規締結数と送信数の推移</canvas>
@@ -173,7 +201,12 @@
       </div>
       <div class="legend">
         <span class="legend-item"><span class="legend-sq" style="background:#0F6E56"></span>確定売上</span>
-        <span class="legend-item"><span class="legend-sq" style="background:#9FE1CB"></span>見込み</span>
+        <span class="legend-item">
+          <span class="legend-line" style="border-color:#9FE1CB; border-top-style:dashed;">
+            <span style="display:block; width:5px; height:5px; border-radius:50%; background:#9FE1CB; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></span>
+          </span>
+          見込み
+        </span>
       </div>
       <div style="position:relative; width:100%; height:200px;">
         <canvas id="revenueChart" role="img" aria-label="月次売上推移">月次の確定売上と見込み売上の推移</canvas>
@@ -191,12 +224,12 @@
       <table class="rtable">
         <thead><tr><th>契約名</th><th>相手先</th><th>送信日</th><th>経過</th><th>金額</th><th>担当</th></tr></thead>
         <tbody>
-          <tr><td>業務委託契約書 #2024-087</td><td>株式会社山田商事</td><td>2025/05/01</td><td><span class="days-badge days-danger">29日</span></td><td>¥2,400,000</td><td>田中 太郎</td></tr>
-          <tr><td>ソフトウェア利用契約 #2024-091</td><td>合同会社テック</td><td>2025/05/05</td><td><span class="days-badge days-danger">25日</span></td><td>¥840,000</td><td>佐藤 花子</td></tr>
-          <tr><td>保守サービス契約 #2024-095</td><td>鈴木工業株式会社</td><td>2025/05/12</td><td><span class="days-badge days-warn">18日</span></td><td>¥1,200,000</td><td>田中 太郎</td></tr>
-          <tr><td>コンサルティング契約 #2024-098</td><td>有限会社北野</td><td>2025/05/16</td><td><span class="days-badge days-warn">14日</span></td><td>¥680,000</td><td>中村 次郎</td></tr>
-          <tr><td>販売代理店契約 #2024-102</td><td>松本販売株式会社</td><td>2025/05/22</td><td><span class="days-badge days-ok">8日</span></td><td>¥3,600,000</td><td>佐藤 花子</td></tr>
-          <tr><td>賃貸借契約 #2024-105</td><td>不動産管理株式会社</td><td>2025/05/25</td><td><span class="days-badge days-ok">5日</span></td><td>¥960,000</td><td>中村 次郎</td></tr>
+          <tr><td>業務委託契約書 #2024-087</td><td>株式会社山田商事</td><td>2025/05/01</td><td><span class="days-badge days-danger">29日</span></td><td>2,400千円</td><td>田中 太郎</td></tr>
+          <tr><td>ソフトウェア利用契約 #2024-091</td><td>合同会社テック</td><td>2025/05/05</td><td><span class="days-badge days-danger">25日</span></td><td>840千円</td><td>佐藤 花子</td></tr>
+          <tr><td>保守サービス契約 #2024-095</td><td>鈴木工業株式会社</td><td>2025/05/12</td><td><span class="days-badge days-warn">18日</span></td><td>1,200千円</td><td>田中 太郎</td></tr>
+          <tr><td>コンサルティング契約 #2024-098</td><td>有限会社北野</td><td>2025/05/16</td><td><span class="days-badge days-warn">14日</span></td><td>680千円</td><td>中村 次郎</td></tr>
+          <tr><td>販売代理店契約 #2024-102</td><td>松本販売株式会社</td><td>2025/05/22</td><td><span class="days-badge days-ok">8日</span></td><td>3,600千円</td><td>佐藤 花子</td></tr>
+          <tr><td>賃貸借契約 #2024-105</td><td>不動産管理株式会社</td><td>2025/05/25</td><td><span class="days-badge days-ok">5日</span></td><td>960千円</td><td>中村 次郎</td></tr>
         </tbody>
       </table>
     </div>
@@ -205,22 +238,22 @@
   <div class="section-label">売上予測</div>
   <div class="forecast-row">
     <div class="card" style="margin-bottom:0">
-      <div class="forecast-period">2025年4月〜9月（今期）</div>
-      <div class="forecast-amount">¥61,200,000</div>
+      <div class="forecast-period">2025年1月〜12月（今期）</div>
+      <div class="forecast-amount">61,200千円</div>
       <div class="forecast-bar"><div class="forecast-fill" style="width:70%; background:#185FA5;"></div></div>
       <div class="forecast-breakdown">
-        <div class="breakdown-item">確定<br><span class="breakdown-val">¥42.8M</span></div>
-        <div class="breakdown-item">進行中<br><span class="breakdown-val">¥10.4M</span></div>
-        <div class="breakdown-item">見込み<br><span class="breakdown-val">¥8.0M</span></div>
+        <div class="breakdown-item">確定<br><span class="breakdown-val">42,800千円</span></div>
+        <div class="breakdown-item">進行中<br><span class="breakdown-val">10,400千円</span></div>
+        <div class="breakdown-item">見込み<br><span class="breakdown-val">8,000千円</span></div>
       </div>
     </div>
     <div class="card" style="margin-bottom:0">
-      <div class="forecast-period">2025年10月〜2026年3月（来期）</div>
-      <div class="forecast-amount">¥74,500,000</div>
+      <div class="forecast-period">2026年1月〜12月（来期）</div>
+      <div class="forecast-amount">74,500千円</div>
       <div class="forecast-bar"><div class="forecast-fill" style="width:55%; background:#0F6E56;"></div></div>
       <div class="forecast-breakdown">
-        <div class="breakdown-item">継続更新<br><span class="breakdown-val">¥48.2M</span></div>
-        <div class="breakdown-item">新規見込み<br><span class="breakdown-val">¥26.3M</span></div>
+        <div class="breakdown-item">継続更新<br><span class="breakdown-val">48,200千円</span></div>
+        <div class="breakdown-item">新規見込み<br><span class="breakdown-val">26,300千円</span></div>
       </div>
     </div>
   </div>
@@ -235,41 +268,42 @@ function setSource(btn) {
   btn.classList.add('active');
 }
 
-// 24ヶ月分のサンプルデータ（新しい月が末尾）
-const allMonths = ['24年6月','7月','8月','9月','10月','11月','12月','25年1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月','26年1月','2月','3月','4月','5月'];
-const allClosed = [10,11,12,10,13,12,14,18,21,19,24,22,20,21,23,25,22,24,26,20,22,24,23,22];
-const allSent   = [13,14,15,13,16,15,18,22,25,24,28,23,25,26,28,30,27,29,31,25,27,29,28,27];
-const allConfirmed = [5.2,5.5,5.8,5.4,6.0,5.8,5.8,7.2,8.4,7.9,8.3,5.2,6.0,6.5,7.0,7.8,7.2,7.9,8.5,6.8,7.3,7.8,8.0,7.5];
-const allForecast  = [5.6,5.9,6.2,5.8,6.4,6.2,6.2,7.8,9.0,8.5,10.2,9.4,8.5,9.0,9.8,10.5,9.8,10.5,11.2,9.2,9.8,10.4,10.8,10.2];
+const allMonths   = ['24年6月','7月','8月','9月','10月','11月','12月','25年1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月','26年1月','2月','3月','4月','5月'];
+const allClosed   = [10,11,12,10,13,12,14,18,21,19,24,22,20,21,23,25,22,24,26,20,22,24,23,22];
+const allSent     = [13,14,15,13,16,15,18,22,25,24,28,23,25,26,28,30,27,29,31,25,27,29,28,27];
+const allConfirmed= [5.2,5.5,5.8,5.4,6.0,5.8,5.8,7.2,8.4,7.9,8.3,5.2,6.0,6.5,7.0,7.8,7.2,7.9,8.5,6.8,7.3,7.8,8.0,7.5];
+const allForecast = [5.6,5.9,6.2,5.8,6.4,6.2,6.2,7.8,9.0,8.5,10.2,9.4,8.5,9.0,9.8,10.5,9.8,10.5,11.2,9.2,9.8,10.4,10.8,10.2];
 
-const scaleDefaults = {
-  x: { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780', autoSkip: false, maxRotation: 0 } },
-  y: { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true }
-};
+const scaleX = { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780', autoSkip: false, maxRotation: 0 } };
+const scaleY = { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true };
 
 const countChart = new Chart(document.getElementById('countChart'), {
   type: 'bar',
   data: { labels: [], datasets: [
-    { label: '新規締結', data: [], backgroundColor: '#185FA5', borderRadius: 3 },
-    { label: '送信', data: [], type: 'line', borderColor: '#185FA5', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#185FA5' }
+    { label: '新規締結', data: [], backgroundColor: '#185FA5', borderRadius: 3, order: 2 },
+    { label: '送信', data: [], type: 'line', borderColor: '#B5D4F4', backgroundColor: 'transparent',
+      borderWidth: 2, borderDash: [4,2], tension: 0.3, pointRadius: 4,
+      pointBackgroundColor: '#B5D4F4', pointBorderColor: '#B5D4F4', order: 1 }
   ]},
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: scaleDefaults }
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: scaleX, y: scaleY } }
 });
 
 const revenueChart = new Chart(document.getElementById('revenueChart'), {
   type: 'bar',
   data: { labels: [], datasets: [
-    { label: '確定売上', data: [], backgroundColor: '#0F6E56', borderRadius: 3 },
-    { label: '見込み', data: [], type: 'line', borderColor: '#0F6E56', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0F6E56' }
+    { label: '確定売上', data: [], backgroundColor: '#0F6E56', borderRadius: 3, order: 2 },
+    { label: '見込み', data: [], type: 'line', borderColor: '#9FE1CB', backgroundColor: 'transparent',
+      borderWidth: 2, borderDash: [4,2], tension: 0.3, pointRadius: 4,
+      pointBackgroundColor: '#9FE1CB', pointBorderColor: '#9FE1CB', order: 1 }
   ]},
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { ...scaleDefaults, y: { ...scaleDefaults.y, ticks: { ...scaleDefaults.y.ticks, callback: v => '¥' + v + 'M' } } } }
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v + 'M' } } } }
 });
 
 function setPeriod(chartKey, months, btn) {
   const toggleId = chartKey === 'count' ? 'countPeriod' : 'revPeriod';
   document.querySelectorAll('#' + toggleId + ' .period-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-
   const labels = allMonths.slice(-months);
   if (chartKey === 'count') {
     countChart.data.labels = labels;
@@ -284,13 +318,13 @@ function setPeriod(chartKey, months, btn) {
   }
 }
 
-// 初期表示：6ヶ月
 setPeriod('count', 6, document.querySelector('#countPeriod .period-btn:nth-child(2)'));
 setPeriod('rev',   6, document.querySelector('#revPeriod .period-btn:nth-child(2)'));
 
 new Chart(document.getElementById('statusChart'), {
   type: 'doughnut',
-  data: { labels: ['締結済み','送信済み','ドラフト','確認中','差し戻し','無効'], datasets: [{ data: [89,23,18,12,4,2], backgroundColor: ['#639922','#378ADD','#888780','#EF9F27','#E24B4A','#D4537E'], borderWidth: 0, hoverOffset: 4 }] },
+  data: { labels: ['締結済み','送信済み','ドラフト','確認中','差し戻し','無効'],
+    datasets: [{ data: [89,23,18,12,4,2], backgroundColor: ['#639922','#378ADD','#888780','#EF9F27','#E24B4A','#D4537E'], borderWidth: 0, hoverOffset: 4 }] },
   options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } }
 });
 </script>
