@@ -9,225 +9,82 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #f4f3ef;
-    --surface: #ffffff;
-    --surface2: #f0eeea;
-    --border: #e2dfd8;
-    --text: #1a1917;
-    --text-muted: #7a7871;
-    --text-faint: #b0ada6;
-    --blue: #185FA5;
-    --blue-light: #E6F1FB;
-    --blue-mid: #378ADD;
-    --green: #0F6E56;
-    --green-light: #E1F5EE;
-    --amber: #854F0B;
-    --amber-light: #FAEEDA;
-    --red: #A32D2D;
-    --red-light: #FCEBEB;
-    --gray: #5F5E5A;
+    --bg: #f4f3ef; --surface: #ffffff; --surface2: #f0eeea; --border: #e2dfd8;
+    --text: #1a1917; --text-muted: #7a7871; --text-faint: #b0ada6;
+    --blue: #185FA5; --blue-light: #E6F1FB; --green: #0F6E56; --green-light: #E1F5EE;
+    --amber: #854F0B; --amber-light: #FAEEDA; --red: #A32D2D; --red-light: #FCEBEB;
   }
-
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #18181a;
-      --surface: #232325;
-      --surface2: #2c2c2e;
-      --border: #38383a;
-      --text: #f0eeea;
-      --text-muted: #9a9892;
-      --text-faint: #5a5856;
-      --blue-light: #0c2540;
-      --green-light: #042c20;
-      --amber-light: #2a1800;
-      --red-light: #280f0f;
+      --bg: #18181a; --surface: #232325; --surface2: #2c2c2e; --border: #38383a;
+      --text: #f0eeea; --text-muted: #9a9892; --text-faint: #5a5856;
+      --blue-light: #0c2540; --green-light: #042c20; --amber-light: #2a1800; --red-light: #280f0f;
     }
   }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  /* Header */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .header-left { display: flex; align-items: center; gap: 12px; }
-  .logo-mark {
-    width: 28px; height: 28px; background: var(--text);
-    border-radius: 6px; display: flex; align-items: center; justify-content: center;
-  }
+  .logo-mark { width: 28px; height: 28px; background: var(--text); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
   .logo-mark svg { width: 16px; height: 16px; fill: var(--surface); }
   .header-title { font-size: 14px; font-weight: 500; }
   .header-right { display: flex; align-items: center; gap: 8px; }
-  .source-badge {
-    font-size: 11px; padding: 4px 10px; border-radius: 20px;
-    border: 1px solid var(--border); color: var(--text-muted);
-    cursor: pointer; transition: all 0.15s; background: transparent;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .source-badge.active {
-    background: var(--text); color: var(--surface); border-color: var(--text);
-  }
+  .source-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: all 0.15s; background: transparent; font-family: 'DM Sans', sans-serif; }
+  .source-badge.active { background: var(--text); color: var(--surface); border-color: var(--text); }
   .last-updated { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
-
-  /* Layout */
   .main { padding: 1.5rem 2rem 3rem; max-width: 1200px; margin: 0 auto; }
-
-  /* Section label */
-  .section-label {
-    font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--text-faint);
-    margin-bottom: 10px; margin-top: 2rem;
-  }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 10px; margin-top: 2rem; }
   .section-label:first-child { margin-top: 0; }
-
-  /* Metric grid */
-  .metric-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
-  .metric-cell {
-    background: var(--surface);
-    padding: 18px 20px;
-  }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+  .metric-cell { background: var(--surface); padding: 18px 20px; }
   .metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
   .metric-val { font-size: 24px; font-weight: 500; color: var(--text); font-family: 'DM Mono', monospace; }
   .metric-val.danger { color: var(--red); }
   .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
   .metric-delta { font-size: 11px; margin-top: 4px; }
   .delta-up { color: var(--green); }
-
-  /* Card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 14px;
-  }
-  .card-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
   .card-title { font-size: 13px; font-weight: 500; }
   .card-meta { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
 
-  /* Charts row */
-  .charts-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  @media (max-width: 680px) {
-    .charts-row { grid-template-columns: 1fr; }
-  }
+  /* Period toggle */
+  .period-toggle { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; }
+  .period-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  .period-btn.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 
-  /* Status grid */
-  .status-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .status-cell {
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 12px 14px;
-    display: flex; align-items: center; gap: 10px;
-  }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .status-cell { background: var(--surface2); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
   .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .status-name { font-size: 11px; color: var(--text-muted); }
   .status-count { font-size: 18px; font-weight: 500; font-family: 'DM Mono', monospace; }
-
-  /* Reminder table */
   .rtable { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .rtable th {
-    text-align: left; color: var(--text-faint); font-weight: 400;
-    padding: 0 8px 10px; border-bottom: 1px solid var(--border);
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-  }
+  .rtable th { text-align: left; color: var(--text-faint); font-weight: 400; padding: 0 8px 10px; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
   .rtable td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: var(--text); }
   .rtable tr:last-child td { border-bottom: none; }
   .rtable tr:hover td { background: var(--surface2); }
-
-  .days-badge {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace;
-  }
+  .days-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; }
   .days-ok { background: var(--green-light); color: var(--green); }
   .days-warn { background: var(--amber-light); color: var(--amber); }
   .days-danger { background: var(--red-light); color: var(--red); }
-
-  /* Forecast row */
-  .forecast-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
-  }
+  .forecast-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
   @media (max-width: 680px) { .forecast-row { grid-template-columns: 1fr; } }
   .forecast-period { font-size: 11px; color: var(--text-faint); margin-bottom: 6px; }
-  .forecast-amount {
-    font-size: 28px; font-weight: 500; font-family: 'DM Mono', monospace;
-    color: var(--text); margin-bottom: 4px;
-  }
-  .forecast-bar {
-    height: 3px; background: var(--surface2); border-radius: 2px;
-    margin: 14px 0 10px; overflow: hidden;
-  }
+  .forecast-amount { font-size: 28px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); margin-bottom: 4px; }
+  .forecast-bar { height: 3px; background: var(--surface2); border-radius: 2px; margin: 14px 0 10px; overflow: hidden; }
   .forecast-fill { height: 100%; border-radius: 2px; }
   .forecast-breakdown { display: flex; gap: 16px; flex-wrap: wrap; }
   .breakdown-item { font-size: 11px; color: var(--text-muted); }
   .breakdown-val { font-family: 'DM Mono', monospace; font-size: 12px; }
-
-  /* Legend */
   .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
   .legend-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-
-  /* Notice */
-  .notice {
-    font-size: 11px; color: var(--text-faint); text-align: center;
-    padding: 16px; border-top: 1px solid var(--border); margin-top: 2rem;
-  }
-
-  /* Responsive header */
-  @media (max-width: 600px) {
-    .header { padding: 0 1rem; }
-    .main { padding: 1rem 1rem 2rem; }
-    .last-updated { display: none; }
-    .metric-grid { grid-template-columns: 1fr 1fr; }
-  }
-
-  /* Fade-in animation */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .main > * {
-    animation: fadeUp 0.4s ease both;
-  }
+  .notice { font-size: 11px; color: var(--text-faint); text-align: center; padding: 16px; border-top: 1px solid var(--border); margin-top: 2rem; }
+  @media (max-width: 600px) { .header { padding: 0 1rem; } .main { padding: 1rem 1rem 2rem; } .last-updated { display: none; } .metric-grid { grid-template-columns: 1fr 1fr; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .main > * { animation: fadeUp 0.4s ease both; }
   .main > *:nth-child(1) { animation-delay: 0.05s; }
   .main > *:nth-child(2) { animation-delay: 0.1s; }
   .main > *:nth-child(3) { animation-delay: 0.15s; }
@@ -248,80 +105,36 @@
   </div>
   <div class="header-right">
     <span class="last-updated">更新：2025/05/30 09:00</span>
-    <button class="source-badge active" onclick="setSource(this,'sign')">freee サイン</button>
-    <button class="source-badge" onclick="setSource(this,'adobe')">Adobe Sign</button>
+    <button class="source-badge active" onclick="setSource(this)">freee サイン</button>
+    <button class="source-badge" onclick="setSource(this)">Adobe Sign</button>
   </div>
 </header>
 
 <main class="main">
 
   <div class="section-label">サマリー</div>
-
   <div class="metric-grid">
-    <div class="metric-cell">
-      <div class="metric-label">総契約数</div>
-      <div class="metric-val">148</div>
-      <div class="metric-delta delta-up">↑ 12 先月比</div>
-    </div>
-    <div class="metric-cell">
-      <div class="metric-label">今期売上（確定）</div>
-      <div class="metric-val">¥42.8M</div>
-      <div class="metric-delta delta-up">↑ 8.3%</div>
-    </div>
-    <div class="metric-cell">
-      <div class="metric-label">締結待ち</div>
-      <div class="metric-val">23</div>
-      <div class="metric-sub">平均 6.4日経過</div>
-    </div>
-    <div class="metric-cell">
-      <div class="metric-label">要リマインド</div>
-      <div class="metric-val danger">7</div>
-      <div class="metric-sub">14日以上経過</div>
-    </div>
-    <div class="metric-cell">
-      <div class="metric-label">今期見込み売上</div>
-      <div class="metric-val">¥61.2M</div>
-      <div class="metric-sub">確定 + 進行中</div>
-    </div>
-    <div class="metric-cell">
-      <div class="metric-label">来期見込み売上</div>
-      <div class="metric-val">¥74.5M</div>
-      <div class="metric-sub">予測値</div>
-    </div>
+    <div class="metric-cell"><div class="metric-label">総契約数</div><div class="metric-val">148</div><div class="metric-delta delta-up">↑ 12 先月比</div></div>
+    <div class="metric-cell"><div class="metric-label">今期売上（確定）</div><div class="metric-val">¥42.8M</div><div class="metric-delta delta-up">↑ 8.3%</div></div>
+    <div class="metric-cell"><div class="metric-label">締結待ち</div><div class="metric-val">23</div><div class="metric-sub">平均 6.4日経過</div></div>
+    <div class="metric-cell"><div class="metric-label">要リマインド</div><div class="metric-val danger">7</div><div class="metric-sub">14日以上経過</div></div>
+    <div class="metric-cell"><div class="metric-label">今期見込み売上</div><div class="metric-val">¥61.2M</div><div class="metric-sub">確定 + 進行中</div></div>
+    <div class="metric-cell"><div class="metric-label">来期見込み売上</div><div class="metric-val">¥74.5M</div><div class="metric-sub">予測値</div></div>
   </div>
 
   <div class="section-label">契約ステータス</div>
-
   <div class="card">
     <div class="card-header">
       <span class="card-title">ステータス別件数</span>
       <span class="card-meta">合計 148件</span>
     </div>
     <div class="status-grid">
-      <div class="status-cell">
-        <div class="status-dot" style="background:#888780"></div>
-        <div><div class="status-name">ドラフト</div><div class="status-count">18</div></div>
-      </div>
-      <div class="status-cell">
-        <div class="status-dot" style="background:#378ADD"></div>
-        <div><div class="status-name">送信済み</div><div class="status-count">23</div></div>
-      </div>
-      <div class="status-cell">
-        <div class="status-dot" style="background:#EF9F27"></div>
-        <div><div class="status-name">確認中</div><div class="status-count">12</div></div>
-      </div>
-      <div class="status-cell">
-        <div class="status-dot" style="background:#639922"></div>
-        <div><div class="status-name">締結済み</div><div class="status-count">89</div></div>
-      </div>
-      <div class="status-cell">
-        <div class="status-dot" style="background:#E24B4A"></div>
-        <div><div class="status-name">差し戻し</div><div class="status-count">4</div></div>
-      </div>
-      <div class="status-cell">
-        <div class="status-dot" style="background:#D4537E"></div>
-        <div><div class="status-name">無効</div><div class="status-count">2</div></div>
-      </div>
+      <div class="status-cell"><div class="status-dot" style="background:#888780"></div><div><div class="status-name">ドラフト</div><div class="status-count">18</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#378ADD"></div><div><div class="status-name">送信済み</div><div class="status-count">23</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#EF9F27"></div><div><div class="status-name">確認中</div><div class="status-count">12</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#639922"></div><div><div class="status-name">締結済み</div><div class="status-count">89</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#E24B4A"></div><div><div class="status-name">差し戻し</div><div class="status-count">4</div></div></div>
+      <div class="status-cell"><div class="status-dot" style="background:#D4537E"></div><div><div class="status-name">無効</div><div class="status-count">2</div></div></div>
     </div>
     <div style="position:relative; width:100%; height:200px;">
       <canvas id="statusChart" role="img" aria-label="契約ステータス別ドーナツグラフ">締結済み89、送信済み23、ドラフト18、確認中12、差し戻し4、無効2</canvas>
@@ -329,12 +142,16 @@
   </div>
 
   <div class="section-label">推移</div>
-
   <div class="charts-row">
     <div class="card" style="margin-bottom:0">
       <div class="card-header">
         <span class="card-title">契約件数の推移</span>
-        <span class="card-meta">過去6ヶ月</span>
+        <div class="period-toggle" id="countPeriod">
+          <button class="period-btn" onclick="setPeriod('count',3,this)">3ヶ月</button>
+          <button class="period-btn active" onclick="setPeriod('count',6,this)">6ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('count',12,this)">12ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('count',24,this)">2年</button>
+        </div>
       </div>
       <div class="legend">
         <span class="legend-item"><span class="legend-sq" style="background:#185FA5"></span>新規締結</span>
@@ -347,7 +164,12 @@
     <div class="card" style="margin-bottom:0">
       <div class="card-header">
         <span class="card-title">売上の推移</span>
-        <span class="card-meta">過去6ヶ月</span>
+        <div class="period-toggle" id="revPeriod">
+          <button class="period-btn" onclick="setPeriod('rev',3,this)">3ヶ月</button>
+          <button class="period-btn active" onclick="setPeriod('rev',6,this)">6ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('rev',12,this)">12ヶ月</button>
+          <button class="period-btn" onclick="setPeriod('rev',24,this)">2年</button>
+        </div>
       </div>
       <div class="legend">
         <span class="legend-item"><span class="legend-sq" style="background:#0F6E56"></span>確定売上</span>
@@ -360,7 +182,6 @@
   </div>
 
   <div class="section-label" style="margin-top:1.5rem">リマインド</div>
-
   <div class="card">
     <div class="card-header">
       <span class="card-title">送信済み契約の経過日数</span>
@@ -368,79 +189,25 @@
     </div>
     <div style="overflow-x:auto;">
       <table class="rtable">
-        <thead>
-          <tr>
-            <th>契約名</th>
-            <th>相手先</th>
-            <th>送信日</th>
-            <th>経過</th>
-            <th>金額</th>
-            <th>担当</th>
-          </tr>
-        </thead>
+        <thead><tr><th>契約名</th><th>相手先</th><th>送信日</th><th>経過</th><th>金額</th><th>担当</th></tr></thead>
         <tbody>
-          <tr>
-            <td>業務委託契約書 #2024-087</td>
-            <td>株式会社山田商事</td>
-            <td>2025/05/01</td>
-            <td><span class="days-badge days-danger">29日</span></td>
-            <td>¥2,400,000</td>
-            <td>田中 太郎</td>
-          </tr>
-          <tr>
-            <td>ソフトウェア利用契約 #2024-091</td>
-            <td>合同会社テック</td>
-            <td>2025/05/05</td>
-            <td><span class="days-badge days-danger">25日</span></td>
-            <td>¥840,000</td>
-            <td>佐藤 花子</td>
-          </tr>
-          <tr>
-            <td>保守サービス契約 #2024-095</td>
-            <td>鈴木工業株式会社</td>
-            <td>2025/05/12</td>
-            <td><span class="days-badge days-warn">18日</span></td>
-            <td>¥1,200,000</td>
-            <td>田中 太郎</td>
-          </tr>
-          <tr>
-            <td>コンサルティング契約 #2024-098</td>
-            <td>有限会社北野</td>
-            <td>2025/05/16</td>
-            <td><span class="days-badge days-warn">14日</span></td>
-            <td>¥680,000</td>
-            <td>中村 次郎</td>
-          </tr>
-          <tr>
-            <td>販売代理店契約 #2024-102</td>
-            <td>松本販売株式会社</td>
-            <td>2025/05/22</td>
-            <td><span class="days-badge days-ok">8日</span></td>
-            <td>¥3,600,000</td>
-            <td>佐藤 花子</td>
-          </tr>
-          <tr>
-            <td>賃貸借契約 #2024-105</td>
-            <td>不動産管理株式会社</td>
-            <td>2025/05/25</td>
-            <td><span class="days-badge days-ok">5日</span></td>
-            <td>¥960,000</td>
-            <td>中村 次郎</td>
-          </tr>
+          <tr><td>業務委託契約書 #2024-087</td><td>株式会社山田商事</td><td>2025/05/01</td><td><span class="days-badge days-danger">29日</span></td><td>¥2,400,000</td><td>田中 太郎</td></tr>
+          <tr><td>ソフトウェア利用契約 #2024-091</td><td>合同会社テック</td><td>2025/05/05</td><td><span class="days-badge days-danger">25日</span></td><td>¥840,000</td><td>佐藤 花子</td></tr>
+          <tr><td>保守サービス契約 #2024-095</td><td>鈴木工業株式会社</td><td>2025/05/12</td><td><span class="days-badge days-warn">18日</span></td><td>¥1,200,000</td><td>田中 太郎</td></tr>
+          <tr><td>コンサルティング契約 #2024-098</td><td>有限会社北野</td><td>2025/05/16</td><td><span class="days-badge days-warn">14日</span></td><td>¥680,000</td><td>中村 次郎</td></tr>
+          <tr><td>販売代理店契約 #2024-102</td><td>松本販売株式会社</td><td>2025/05/22</td><td><span class="days-badge days-ok">8日</span></td><td>¥3,600,000</td><td>佐藤 花子</td></tr>
+          <tr><td>賃貸借契約 #2024-105</td><td>不動産管理株式会社</td><td>2025/05/25</td><td><span class="days-badge days-ok">5日</span></td><td>¥960,000</td><td>中村 次郎</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <div class="section-label">売上予測</div>
-
   <div class="forecast-row">
     <div class="card" style="margin-bottom:0">
       <div class="forecast-period">2025年4月〜9月（今期）</div>
       <div class="forecast-amount">¥61,200,000</div>
-      <div class="forecast-bar">
-        <div class="forecast-fill" style="width:70%; background:#185FA5;"></div>
-      </div>
+      <div class="forecast-bar"><div class="forecast-fill" style="width:70%; background:#185FA5;"></div></div>
       <div class="forecast-breakdown">
         <div class="breakdown-item">確定<br><span class="breakdown-val">¥42.8M</span></div>
         <div class="breakdown-item">進行中<br><span class="breakdown-val">¥10.4M</span></div>
@@ -450,9 +217,7 @@
     <div class="card" style="margin-bottom:0">
       <div class="forecast-period">2025年10月〜2026年3月（来期）</div>
       <div class="forecast-amount">¥74,500,000</div>
-      <div class="forecast-bar">
-        <div class="forecast-fill" style="width:55%; background:#0F6E56;"></div>
-      </div>
+      <div class="forecast-bar"><div class="forecast-fill" style="width:55%; background:#0F6E56;"></div></div>
       <div class="forecast-breakdown">
         <div class="breakdown-item">継続更新<br><span class="breakdown-val">¥48.2M</span></div>
         <div class="breakdown-item">新規見込み<br><span class="breakdown-val">¥26.3M</span></div>
@@ -460,60 +225,73 @@
     </div>
   </div>
 
-  <div class="notice">
-    現在サンプルデータを表示しています。freee サイン または Adobe Sign と連携するとリアルタイムデータが反映されます。
-  </div>
+  <div class="notice">現在サンプルデータを表示しています。freee サイン または Adobe Sign と連携するとリアルタイムデータが反映されます。</div>
 
 </main>
 
 <script>
-function setSource(btn, src) {
+function setSource(btn) {
   document.querySelectorAll('.source-badge').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
 
-const months = ['12月','1月','2月','3月','4月','5月'];
-const chartDefaults = {
-  plugins: { legend: { display: false } },
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    x: { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780', autoSkip: false, maxRotation: 0 } },
-    y: { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true }
-  }
+// 24ヶ月分のサンプルデータ（新しい月が末尾）
+const allMonths = ['24年6月','7月','8月','9月','10月','11月','12月','25年1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月','26年1月','2月','3月','4月','5月'];
+const allClosed = [10,11,12,10,13,12,14,18,21,19,24,22,20,21,23,25,22,24,26,20,22,24,23,22];
+const allSent   = [13,14,15,13,16,15,18,22,25,24,28,23,25,26,28,30,27,29,31,25,27,29,28,27];
+const allConfirmed = [5.2,5.5,5.8,5.4,6.0,5.8,5.8,7.2,8.4,7.9,8.3,5.2,6.0,6.5,7.0,7.8,7.2,7.9,8.5,6.8,7.3,7.8,8.0,7.5];
+const allForecast  = [5.6,5.9,6.2,5.8,6.4,6.2,6.2,7.8,9.0,8.5,10.2,9.4,8.5,9.0,9.8,10.5,9.8,10.5,11.2,9.2,9.8,10.4,10.8,10.2];
+
+const scaleDefaults = {
+  x: { grid: { display: false }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780', autoSkip: false, maxRotation: 0 } },
+  y: { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { size: 11, family: "'DM Mono'" }, color: '#888780' }, beginAtZero: true }
 };
+
+const countChart = new Chart(document.getElementById('countChart'), {
+  type: 'bar',
+  data: { labels: [], datasets: [
+    { label: '新規締結', data: [], backgroundColor: '#185FA5', borderRadius: 3 },
+    { label: '送信', data: [], type: 'line', borderColor: '#185FA5', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#185FA5' }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: scaleDefaults }
+});
+
+const revenueChart = new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: { labels: [], datasets: [
+    { label: '確定売上', data: [], backgroundColor: '#0F6E56', borderRadius: 3 },
+    { label: '見込み', data: [], type: 'line', borderColor: '#0F6E56', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0F6E56' }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { ...scaleDefaults, y: { ...scaleDefaults.y, ticks: { ...scaleDefaults.y.ticks, callback: v => '¥' + v + 'M' } } } }
+});
+
+function setPeriod(chartKey, months, btn) {
+  const toggleId = chartKey === 'count' ? 'countPeriod' : 'revPeriod';
+  document.querySelectorAll('#' + toggleId + ' .period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const labels = allMonths.slice(-months);
+  if (chartKey === 'count') {
+    countChart.data.labels = labels;
+    countChart.data.datasets[0].data = allClosed.slice(-months);
+    countChart.data.datasets[1].data = allSent.slice(-months);
+    countChart.update();
+  } else {
+    revenueChart.data.labels = labels;
+    revenueChart.data.datasets[0].data = allConfirmed.slice(-months);
+    revenueChart.data.datasets[1].data = allForecast.slice(-months);
+    revenueChart.update();
+  }
+}
+
+// 初期表示：6ヶ月
+setPeriod('count', 6, document.querySelector('#countPeriod .period-btn:nth-child(2)'));
+setPeriod('rev',   6, document.querySelector('#revPeriod .period-btn:nth-child(2)'));
 
 new Chart(document.getElementById('statusChart'), {
   type: 'doughnut',
-  data: {
-    labels: ['締結済み','送信済み','ドラフト','確認中','差し戻し','無効'],
-    datasets: [{ data: [89,23,18,12,4,2], backgroundColor: ['#639922','#378ADD','#888780','#EF9F27','#E24B4A','#D4537E'], borderWidth: 0, hoverOffset: 4 }]
-  },
+  data: { labels: ['締結済み','送信済み','ドラフト','確認中','差し戻し','無効'], datasets: [{ data: [89,23,18,12,4,2], backgroundColor: ['#639922','#378ADD','#888780','#EF9F27','#E24B4A','#D4537E'], borderWidth: 0, hoverOffset: 4 }] },
   options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { display: false } } }
-});
-
-new Chart(document.getElementById('countChart'), {
-  type: 'bar',
-  data: {
-    labels: months,
-    datasets: [
-      { label: '新規締結', data: [14,18,21,19,24,22], backgroundColor: '#185FA5', borderRadius: 3 },
-      { label: '送信', data: [18,22,25,24,28,23], type: 'line', borderColor: '#185FA5', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#185FA5' }
-    ]
-  },
-  options: chartDefaults
-});
-
-new Chart(document.getElementById('revenueChart'), {
-  type: 'bar',
-  data: {
-    labels: months,
-    datasets: [
-      { label: '確定売上', data: [5.8,7.2,8.4,7.9,8.3,5.2], backgroundColor: '#0F6E56', borderRadius: 3 },
-      { label: '見込み', data: [6.2,7.8,9.0,8.5,10.2,9.4], type: 'line', borderColor: '#0F6E56', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,2], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#0F6E56' }
-    ]
-  },
-  options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, callback: v => '¥' + v + 'M' } } } }
 });
 </script>
 </body>
