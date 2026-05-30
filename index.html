@@ -115,6 +115,19 @@
   .date-filter .clear-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; font-family: 'DM Sans', sans-serif; }
   .date-filter .clear-btn:hover { background: var(--surface2); color: var(--text); }
   .empty-row td { color: var(--text-faint); text-align: center; padding: 16px; }
+  .task-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .task-row { grid-template-columns: 1fr; } }
+  .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; }
+  .task-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .task-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .task-count { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 12px; font-family: 'DM Mono', monospace; }
+  .task-count.has { background: var(--amber-light); color: var(--amber); }
+  .task-count.zero { background: var(--green-light); color: var(--green); }
+  .task-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+  .task-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--surface2); border-radius: 8px; font-size: 12px; }
+  .task-item-name { font-weight: 500; color: var(--text); }
+  .task-item-sub { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .task-empty { font-size: 12px; color: var(--text-faint); text-align: center; padding: 20px 0; }
   .forecast-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
   @media (max-width: 680px) { .forecast-row { grid-template-columns: 1fr; } }
   .forecast-period { font-size: 11px; color: var(--text-faint); margin-bottom: 6px; }
@@ -305,6 +318,31 @@
     </div>
   </div>
 
+  <div class="section-label" style="margin-top:1.5rem">タスク</div>
+  <div class="task-row">
+    <div class="task-card">
+      <div class="task-head">
+        <span class="task-title"><span class="stage-badge stage-inquiry">問い合わせ</span>コンタクト未</span>
+        <span class="task-count" id="taskInquiryCount">0</span>
+      </div>
+      <div class="task-list" id="taskInquiryList"></div>
+    </div>
+    <div class="task-card">
+      <div class="task-head">
+        <span class="task-title"><span class="stage-badge stage-meeting">面談</span>見積未送信</span>
+        <span class="task-count" id="taskMeetingCount">0</span>
+      </div>
+      <div class="task-list" id="taskMeetingList"></div>
+    </div>
+    <div class="task-card">
+      <div class="task-head">
+        <span class="task-title"><span class="stage-badge stage-contract">契約</span>契約書未送信</span>
+        <span class="task-count" id="taskContractCount">0</span>
+      </div>
+      <div class="task-list" id="taskContractList"></div>
+    </div>
+  </div>
+
   <div class="section-label" style="margin-top:1.5rem">リマインド</div>
   <div class="card">
     <div class="card-header">
@@ -394,7 +432,7 @@
     <div style="overflow-x:auto;">
       <table class="rtable">
         <thead><tr>
-          <th>顧客名</th><th>代表者名</th><th>初回連絡日</th><th>事業形態</th><th>流入チャネル</th>
+          <th>顧客名</th><th>代表者名</th><th>初回連絡日</th><th>コンタクト日</th><th>事業形態</th><th>流入チャネル</th>
           <th>電話番号</th><th>メール</th><th>初回返信日</th><th>経過</th><th>面談移行</th><th>備考</th>
         </tr></thead>
         <tbody id="tbody-inquiry"></tbody>
@@ -575,6 +613,32 @@ function setPeriod(chartKey, months, btn) {
 }
 
 // 概要サマリー（カード・ステータス・売上予測）をcustomersから集計して描画
+// タスク欄：3カテゴリを抽出して描画
+function renderTasks() {
+  // 1. 問い合わせタスク：コンタクト日が空欄
+  const inquiryTasks = customers.filter(c => c.stage === 'inquiry' && !c.contactDate);
+  // 2. 面談タスク：面談日を経過しているのに見積送信日が空欄
+  const meetingTasks = customers.filter(c => c.meetingDate && daysSince(c.meetingDate) >= 0 && !c.quoteDate);
+  // 3. 契約タスク：契約ステージで契約書送信日が空欄（送付準備中）
+  const contractTasks = customers.filter(c => c.stage === 'contract' && !c.contractSentDate);
+
+  function paint(listId, countId, rows, subFn) {
+    const cnt = document.getElementById(countId);
+    cnt.textContent = rows.length;
+    cnt.className = 'task-count ' + (rows.length ? 'has' : 'zero');
+    const list = document.getElementById(listId);
+    if (!rows.length) { list.innerHTML = '<div class="task-empty">対応待ちのタスクはありません</div>'; return; }
+    list.innerHTML = rows.map(c =>
+      '<div class="task-item"><span class="task-item-name">' + c.name + '</span>' +
+      '<span class="task-item-sub">' + subFn(c) + '</span></div>'
+    ).join('');
+  }
+
+  paint('taskInquiryList', 'taskInquiryCount', inquiryTasks, c => '連絡 ' + fmtDate(c.firstContact));
+  paint('taskMeetingList', 'taskMeetingCount', meetingTasks, c => '面談 ' + fmtDate(c.meetingDate));
+  paint('taskContractList', 'taskContractCount', contractTasks, c => '面談 ' + fmtDate(c.meetingDate));
+}
+
 function renderOverviewSummary() {
   const FY = 2025; // 今期（12月決算）
   const closed = customers.filter(c => c.contractDate);
@@ -651,6 +715,7 @@ function renderOverviewSummary() {
       '<td>' + (c.contractAmt||0).toLocaleString() + '千円</td><td><span class="pill">' + c.channel + '</span></td></tr>';
   }).join('') || '<tr><td colspan="6" style="color:var(--text-faint);text-align:center;">送信済み・未締結の契約はありません</td></tr>';
 
+  renderTasks();
   return stCount;
 }
 
@@ -713,80 +778,85 @@ function fmtDate(dateStr) {
   const day = String(d.getDate()).padStart(2, '0');
   return y + '/' + m + '/' + day;
 }
+// 日付があれば表示、空欄なら「未」バッジ（黄色）
+function fmtDateOrPending(dateStr) {
+  if (dateStr) return fmtDate(dateStr);
+  return '<span class="pill" style="color:var(--amber);background:var(--amber-light);">未</span>';
+}
 
 const customers = [
-  { name:'株式会社風製作所', rep:'海野 一郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-4517-1614', email:'user0@example.com', note:'複数年契約検討中', firstContact:'2024-10-25', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社木村ホールディングス', rep:'田中 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'03-4622-1763', email:'user1@example.com', note:'予算確認待ち', firstContact:'2024-07-18', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社渡辺ホールディングス', rep:'空 涼', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'05-2596-9974', email:'user2@example.com', note:'再連絡予定', firstContact:'2024-09-18', firstReply:'2024-09-23', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'川上エージェンシー', rep:'海野 翔', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-3945-4999', email:'user3@example.com', note:'見積調整中', firstContact:'2024-12-11', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社日向工業', rep:'中村 星', stage:'inquiry', channel:'MF', biz:'個人', contractStatus:null, tel:'04-6604-3490', email:'user4@example.com', note:'競合検討中', firstContact:'2024-11-24', firstReply:'2024-11-28', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社緑川企画', rep:'日向 青', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'07-8474-2126', email:'user5@example.com', note:'', firstContact:'2025-01-21', firstReply:'2025-01-24', meetingDate:'2025-01-31', quoteDate:'2025-02-03', quoteAmt:1240, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'星野', rep:'西野 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-2918-9088', email:'user6@example.com', note:'見積調整中', firstContact:'2024-05-04', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'伊藤デザイン', rep:'縁 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-5552-3243', email:'user7@example.com', note:'複数年契約検討中', firstContact:'2024-07-02', firstReply:'2024-07-07', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社加藤工業', rep:'山本 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-4822-1197', email:'user8@example.com', note:'見積調整中', firstContact:'2024-06-26', firstReply:'2024-07-01', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社小林ファーム', rep:'月見 一郎', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'06-7428-7521', email:'user9@example.com', note:'押印待ち', firstContact:'2024-06-20', firstReply:'2024-06-21', meetingDate:'2024-07-10', quoteDate:'2024-07-13', quoteAmt:1000, contractSentDate:'2024-07-24', contractAmt:1000, contractDate:'2024-07-31' },
-  { name:'株式会社海野パートナーズ', rep:'鈴木 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'09-4407-7164', email:'user10@example.com', note:'', firstContact:'2024-09-21', firstReply:'2024-09-24', meetingDate:'2024-10-10', quoteDate:'2024-10-20', quoteAmt:1060, contractSentDate:'2024-11-09', contractAmt:1060, contractDate:'2024-11-27' },
-  { name:'有限会社北野デザイン', rep:'光 太郎', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-9654-6926', email:'user11@example.com', note:'押印待ち', firstContact:'2024-12-01', firstReply:'2024-12-06', meetingDate:'2024-12-25', quoteDate:'2025-01-01', quoteAmt:1940, contractSentDate:'2025-01-14', contractAmt:1940, contractDate:'2025-01-23' },
-  { name:'有限会社木村パートナーズ', rep:'松本 大', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'09-7564-4714', email:'user12@example.com', note:'', firstContact:'2024-12-12', firstReply:'2024-12-16', meetingDate:'2024-12-20', quoteDate:'2024-12-23', quoteAmt:1300, contractSentDate:'2025-01-05', contractAmt:1300, contractDate:'2025-01-20' },
-  { name:'有限会社伊藤物産', rep:'渡辺 大', stage:'contract', channel:'freee', biz:'個人', contractStatus:'送信済み', tel:'06-4222-6533', email:'user13@example.com', note:'複数年契約検討中', firstContact:'2024-06-10', firstReply:'2024-06-15', meetingDate:'2024-06-18', quoteDate:'2024-06-28', quoteAmt:1440, contractSentDate:'2025-05-25', contractAmt:1440, contractDate:null },
-  { name:'合同会社金田商会', rep:'伊藤 純', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-7576-2391', email:'user14@example.com', note:'予算確認待ち', firstContact:'2024-08-13', firstReply:'2024-08-15', meetingDate:'2024-08-21', quoteDate:'2024-08-26', quoteAmt:1100, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社加藤ラボ', rep:'大地 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'03-1233-2683', email:'user15@example.com', note:'見積調整中', firstContact:'2024-08-11', firstReply:'2024-08-13', meetingDate:'2024-08-25', quoteDate:'2024-08-31', quoteAmt:860, contractSentDate:'2024-09-14', contractAmt:860, contractDate:'2024-09-28' },
-  { name:'有限会社西野ホールディングス', rep:'光 星', stage:'contract', channel:'MF', biz:'個人', contractStatus:'送信済み', tel:'09-9219-3142', email:'user16@example.com', note:'', firstContact:'2023-11-04', firstReply:'2023-11-09', meetingDate:'2023-11-26', quoteDate:'2023-12-11', quoteAmt:1180, contractSentDate:'2025-05-03', contractAmt:1180, contractDate:null },
-  { name:'渡辺ラボ', rep:'田中 大', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5537-1691', email:'user17@example.com', note:'', firstContact:'2024-05-28', firstReply:'2024-06-02', meetingDate:'2024-06-05', quoteDate:'2024-06-20', quoteAmt:1420, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社森エージェンシー', rep:'南 青', stage:'contract', channel:'BP', biz:'個人', contractStatus:'送信済み', tel:'07-5057-9572', email:'user18@example.com', note:'再連絡予定', firstContact:'2024-10-07', firstReply:'2024-10-10', meetingDate:'2024-10-21', quoteDate:'2024-10-31', quoteAmt:2320, contractSentDate:'2025-05-27', contractAmt:2320, contractDate:null },
-  { name:'株式会社加藤企画', rep:'加藤 守', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-8663-4597', email:'user19@example.com', note:'複数年契約検討中', firstContact:'2024-05-15', firstReply:'2024-05-16', meetingDate:'2024-06-07', quoteDate:'2024-06-12', quoteAmt:3040, contractSentDate:'2024-06-30', contractAmt:3040, contractDate:'2024-07-08' },
-  { name:'株式会社緑川ラボ', rep:'西野 緑', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-1296-7297', email:'user20@example.com', note:'競合検討中', firstContact:'2024-11-21', firstReply:'2024-11-26', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社伊藤フーズ', rep:'森 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'09-3974-5430', email:'user21@example.com', note:'競合検討中', firstContact:'2024-03-30', firstReply:'2024-04-03', meetingDate:'2024-04-15', quoteDate:'2024-04-24', quoteAmt:900, contractSentDate:'2025-05-22', contractAmt:900, contractDate:null },
-  { name:'株式会社森', rep:'伊藤 守', stage:'meeting', channel:'WEB', biz:'個人', contractStatus:null, tel:'03-4643-2091', email:'user22@example.com', note:'見積調整中', firstContact:'2024-02-27', firstReply:'2024-02-28', meetingDate:'2024-03-16', quoteDate:'2024-03-27', quoteAmt:1460, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社吉田フーズ', rep:'田中 健', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-6111-5997', email:'user23@example.com', note:'', firstContact:'2024-11-16', firstReply:'2024-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社佐藤', rep:'鈴木 涼', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'07-8778-5025', email:'user24@example.com', note:'再連絡予定', firstContact:'2024-12-21', firstReply:'2024-12-22', meetingDate:'2025-01-11', quoteDate:'2025-01-24', quoteAmt:1000, contractSentDate:'2025-02-10', contractAmt:1000, contractDate:'2025-02-25' },
-  { name:'合同会社未来企画', rep:'田中 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'03-2158-5187', email:'user25@example.com', note:'複数年契約検討中', firstContact:'2025-01-02', firstReply:'2025-01-03', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社池田商事', rep:'西野 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-5407-8304', email:'user26@example.com', note:'押印待ち', firstContact:'2024-05-03', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社佐藤システムズ', rep:'井上 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-1017-6494', email:'user27@example.com', note:'再連絡予定', firstContact:'2024-09-12', firstReply:'2024-09-16', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社加藤建設', rep:'川上 一郎', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'06-1368-5909', email:'user28@example.com', note:'', firstContact:'2023-12-09', firstReply:'2023-12-11', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'青空ソリューションズ', rep:'加藤 翔', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'送信済み', tel:'08-3371-1717', email:'user29@example.com', note:'', firstContact:'2025-01-29', firstReply:'2025-02-04', meetingDate:'2025-02-19', quoteDate:'2025-03-05', quoteAmt:3580, contractSentDate:'2025-05-27', contractAmt:3580, contractDate:null },
-  { name:'合同会社伊藤', rep:'佐藤 花子', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'08-6909-2718', email:'user30@example.com', note:'', firstContact:'2024-12-30', firstReply:'2025-01-03', meetingDate:'2025-01-07', quoteDate:'2025-01-20', quoteAmt:1040, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社光工業', rep:'北野 守', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-2219-5350', email:'user31@example.com', note:'', firstContact:'2023-11-16', firstReply:'2023-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社佐藤パートナーズ', rep:'松本 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'ドラフト', tel:'07-3415-6435', email:'user32@example.com', note:'再連絡予定', firstContact:'2024-08-13', firstReply:'2024-08-19', meetingDate:'2024-08-25', quoteDate:'2024-08-28', quoteAmt:1780, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'西野エージェンシー', rep:'中村 涼', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-2406-8748', email:'user33@example.com', note:'', firstContact:'2024-08-30', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社大関コンサル', rep:'井上 次郎', stage:'meeting', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-2479-3322', email:'user34@example.com', note:'競合検討中', firstContact:'2025-04-26', firstReply:'2025-04-29', meetingDate:'2025-05-08', quoteDate:'2025-05-20', quoteAmt:2280, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'未来', rep:'吉田 太郎', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'06-8385-7642', email:'user35@example.com', note:'資料送付済み', firstContact:'2025-02-01', firstReply:'2025-02-03', meetingDate:'2025-02-21', quoteDate:'2025-03-01', quoteAmt:620, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社山田システムズ', rep:'清水 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'03-7437-7392', email:'user36@example.com', note:'複数年契約検討中', firstContact:'2024-07-05', firstReply:'2024-07-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社池田サービス', rep:'林 守', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-9371-6170', email:'user37@example.com', note:'複数年契約検討中', firstContact:'2024-05-02', firstReply:'2024-05-05', meetingDate:'2024-05-23', quoteDate:'2024-05-26', quoteAmt:1340, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社田中興業', rep:'縁 花子', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'08-5689-8955', email:'user38@example.com', note:'', firstContact:'2024-09-13', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社清水フーズ', rep:'未来 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-8916-7461', email:'user39@example.com', note:'予算確認待ち', firstContact:'2024-06-07', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社縁商会', rep:'縁 星', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'04-9974-4152', email:'user40@example.com', note:'複数年契約検討中', firstContact:'2024-12-24', firstReply:'2024-12-26', meetingDate:'2025-01-03', quoteDate:'2025-01-11', quoteAmt:1080, contractSentDate:'2025-02-03', contractAmt:1080, contractDate:'2025-02-07' },
-  { name:'有限会社緑川商事', rep:'東 守', stage:'meeting', channel:'BP', biz:'個人', contractStatus:null, tel:'07-6900-3062', email:'user41@example.com', note:'複数年契約検討中', firstContact:'2024-03-17', firstReply:'2024-03-22', meetingDate:'2024-03-31', quoteDate:'2024-04-04', quoteAmt:3420, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社小林商事', rep:'金田 青', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-9025-1002', email:'user42@example.com', note:'', firstContact:'2025-03-09', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社木村サービス', rep:'加藤 三郎', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'09-8492-2392', email:'user43@example.com', note:'予算確認待ち', firstContact:'2024-04-12', firstReply:'2024-04-13', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社小林フーズ', rep:'光 星', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'08-2837-2629', email:'user44@example.com', note:'', firstContact:'2024-10-23', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社山田ラボ', rep:'橋本 緑', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'締結済み', tel:'05-6183-4970', email:'user45@example.com', note:'複数年契約検討中', firstContact:'2024-04-20', firstReply:'2024-04-22', meetingDate:'2024-04-28', quoteDate:'2024-05-07', quoteAmt:3580, contractSentDate:'2024-05-13', contractAmt:3580, contractDate:'2024-06-01' },
-  { name:'有限会社木村ソリューションズ', rep:'佐藤 永', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-7890-6936', email:'user46@example.com', note:'見積調整中', firstContact:'2024-07-18', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社橋本コンサル', rep:'木村 緑', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5342-5832', email:'user47@example.com', note:'', firstContact:'2024-03-14', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'田中パートナーズ', rep:'加藤 純', stage:'contract', channel:'MF', biz:'法人', contractStatus:'確認中', tel:'03-4488-1387', email:'user48@example.com', note:'予算確認待ち', firstContact:'2024-03-27', firstReply:'2024-03-29', meetingDate:'2024-04-05', quoteDate:'2024-04-10', quoteAmt:1600, contractSentDate:'2025-05-08', contractAmt:1600, contractDate:null },
-  { name:'佐藤システムズ', rep:'大関 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'05-8248-3773', email:'user49@example.com', note:'競合検討中', firstContact:'2025-02-24', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社大地コンサル', rep:'大関 力', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-6057-8085', email:'user50@example.com', note:'', firstContact:'2025-03-10', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社海野ソリューションズ', rep:'鈴木 星', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'04-7631-1666', email:'user51@example.com', note:'資料送付済み', firstContact:'2024-07-29', firstReply:'2024-08-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社海野フーズ', rep:'緑川 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'05-6185-5515', email:'user52@example.com', note:'複数年契約検討中', firstContact:'2025-02-01', firstReply:'2025-02-07', meetingDate:'2025-02-11', quoteDate:'2025-02-14', quoteAmt:2300, contractSentDate:'2025-03-06', contractAmt:2300, contractDate:'2025-03-24' },
-  { name:'合同会社東デザイン', rep:'山田 翔', stage:'contract', channel:'freee', biz:'個人', contractStatus:'締結済み', tel:'09-3479-4868', email:'user53@example.com', note:'資料送付済み', firstContact:'2024-12-25', firstReply:'2024-12-28', meetingDate:'2025-01-04', quoteDate:'2025-01-15', quoteAmt:700, contractSentDate:'2025-01-25', contractAmt:700, contractDate:'2025-01-31' },
-  { name:'渡辺工業', rep:'清水 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'04-2579-7898', email:'user54@example.com', note:'', firstContact:'2024-02-10', firstReply:'2024-02-16', meetingDate:'2024-02-23', quoteDate:'2024-02-29', quoteAmt:1080, contractSentDate:'2024-03-24', contractAmt:1080, contractDate:'2024-04-03' },
-  { name:'有限会社池田フーズ', rep:'空 守', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-5162-5265', email:'user55@example.com', note:'再連絡予定', firstContact:'2024-01-08', firstReply:'2024-01-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社高橋建設', rep:'清水 大', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'07-9623-4790', email:'user56@example.com', note:'資料送付済み', firstContact:'2024-09-25', firstReply:'2024-09-26', meetingDate:'2024-10-04', quoteDate:'2024-10-08', quoteAmt:600, contractSentDate:'2025-05-15', contractAmt:600, contractDate:null },
-  { name:'合同会社高橋企画', rep:'南 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'06-5258-1103', email:'user57@example.com', note:'', firstContact:'2023-10-21', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社加藤商事', rep:'井上 守', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'03-4333-1186', email:'user58@example.com', note:'競合検討中', firstContact:'2023-10-01', firstReply:'2023-10-05', meetingDate:'2023-10-14', quoteDate:'2023-10-26', quoteAmt:820, contractSentDate:'2023-11-01', contractAmt:820, contractDate:'2023-11-20' },
-  { name:'合同会社風工業', rep:'吉田 純', stage:'contract', channel:'BP', biz:'個人', contractStatus:'締結済み', tel:'08-5442-7713', email:'user59@example.com', note:'再連絡予定', firstContact:'2024-10-30', firstReply:'2024-11-05', meetingDate:'2024-11-08', quoteDate:'2024-11-15', quoteAmt:4120, contractSentDate:'2024-11-20', contractAmt:4120, contractDate:'2024-12-05' },
-  { name:'吉田興業', rep:'中村 次郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'06-6975-8551', email:'user60@example.com', note:'', firstContact:'2025-02-28', firstReply:'2025-03-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社南デザイン', rep:'加藤 力', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'05-3651-9538', email:'user61@example.com', note:'', firstContact:'2024-07-04', firstReply:'2024-07-05', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社小林商事', rep:'北野 永', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'03-7355-2413', email:'user62@example.com', note:'', firstContact:'2024-12-22', firstReply:'2024-12-27', meetingDate:'2025-01-04', quoteDate:'2025-01-17', quoteAmt:1300, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'合同会社空コンサル', rep:'佐藤 純', stage:'inquiry', channel:'BP', biz:'個人', contractStatus:null, tel:'07-3563-7284', email:'user63@example.com', note:'再連絡予定', firstContact:'2024-12-31', firstReply:'2025-01-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'株式会社青空製作所', rep:'大関 緑', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'07-6017-7882', email:'user64@example.com', note:'', firstContact:'2024-12-04', firstReply:'2024-12-06', meetingDate:'2024-12-23', quoteDate:'2025-01-02', quoteAmt:1640, contractSentDate:'2025-01-07', contractAmt:1640, contractDate:'2025-01-26' },
-  { name:'山本ソリューションズ', rep:'未来 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'03-3104-6874', email:'user65@example.com', note:'', firstContact:'2024-12-12', firstReply:'2024-12-13', meetingDate:'2025-01-05', quoteDate:'2025-01-16', quoteAmt:1940, contractSentDate:'2025-02-10', contractAmt:1940, contractDate:'2025-02-24' },
-  { name:'合同会社鈴木工業', rep:'月見 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'04-3156-9058', email:'user66@example.com', note:'', firstContact:'2025-01-30', firstReply:'2025-02-01', meetingDate:'2025-02-14', quoteDate:'2025-02-18', quoteAmt:2300, contractSentDate:'2025-03-03', contractAmt:2300, contractDate:'2025-03-15' },
-  { name:'合同会社川上フーズ', rep:'月見 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-7099-1603', email:'user67@example.com', note:'見積調整中', firstContact:'2025-02-13', firstReply:'2025-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社中村ファーム', rep:'田中 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'09-8422-9543', email:'user68@example.com', note:'', firstContact:'2024-02-16', firstReply:'2024-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社大関企画', rep:'空 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'05-6420-2333', email:'user69@example.com', note:'押印待ち', firstContact:'2024-12-19', firstReply:'2024-12-21', meetingDate:'2024-12-28', quoteDate:'2025-01-04', quoteAmt:1860, contractSentDate:'2025-01-29', contractAmt:1860, contractDate:'2025-02-15' },
-  { name:'有限会社月見興業', rep:'雲井 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'03-3163-9001', email:'user70@example.com', note:'資料送付済み', firstContact:'2024-03-25', firstReply:'2024-03-31', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
-  { name:'有限会社風物産', rep:'雲井 翔', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-3190-4345', email:'user71@example.com', note:'資料送付済み', firstContact:'2023-12-25', firstReply:'2023-12-29', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社風製作所', rep:'海野 一郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-4517-1614', email:'user0@example.com', note:'複数年契約検討中', firstContact:'2024-10-25', contactDate:'2024-10-27', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社木村ホールディングス', rep:'田中 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'03-4622-1763', email:'user1@example.com', note:'予算確認待ち', firstContact:'2024-07-18', contactDate:'2024-07-24', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社渡辺ホールディングス', rep:'空 涼', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'05-2596-9974', email:'user2@example.com', note:'再連絡予定', firstContact:'2024-09-18', contactDate:'2024-09-19', firstReply:'2024-09-23', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'川上エージェンシー', rep:'海野 翔', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-3945-4999', email:'user3@example.com', note:'見積調整中', firstContact:'2024-12-11', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社日向工業', rep:'中村 星', stage:'inquiry', channel:'MF', biz:'個人', contractStatus:null, tel:'04-6604-3490', email:'user4@example.com', note:'競合検討中', firstContact:'2024-11-24', contactDate:'2024-11-27', firstReply:'2024-11-28', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社緑川企画', rep:'日向 青', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'07-8474-2126', email:'user5@example.com', note:'', firstContact:'2025-01-21', contactDate:'2025-01-24', firstReply:'2025-01-24', meetingDate:'2025-01-31', quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'星野', rep:'西野 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-2918-9088', email:'user6@example.com', note:'見積調整中', firstContact:'2024-05-04', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'伊藤デザイン', rep:'縁 純', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-5552-3243', email:'user7@example.com', note:'複数年契約検討中', firstContact:'2024-07-02', contactDate:null, firstReply:'2024-07-07', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社加藤工業', rep:'山本 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-4822-1197', email:'user8@example.com', note:'見積調整中', firstContact:'2024-06-26', contactDate:null, firstReply:'2024-07-01', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林ファーム', rep:'月見 一郎', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'06-7428-7521', email:'user9@example.com', note:'押印待ち', firstContact:'2024-06-20', contactDate:'2024-06-21', firstReply:'2024-06-21', meetingDate:'2024-07-10', quoteDate:'2024-07-13', quoteAmt:1000, contractSentDate:'2024-07-24', contractAmt:1000, contractDate:'2024-07-31' },
+  { name:'株式会社海野パートナーズ', rep:'鈴木 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'09-4407-7164', email:'user10@example.com', note:'', firstContact:'2024-09-21', contactDate:'2024-09-24', firstReply:'2024-09-24', meetingDate:'2024-10-10', quoteDate:'2024-10-20', quoteAmt:1060, contractSentDate:'2024-11-09', contractAmt:1060, contractDate:'2024-11-27' },
+  { name:'有限会社北野デザイン', rep:'光 太郎', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-9654-6926', email:'user11@example.com', note:'押印待ち', firstContact:'2024-12-01', contactDate:'2024-12-06', firstReply:'2024-12-06', meetingDate:'2024-12-25', quoteDate:'2025-01-01', quoteAmt:1940, contractSentDate:'2025-01-14', contractAmt:1940, contractDate:'2025-01-23' },
+  { name:'有限会社木村パートナーズ', rep:'松本 大', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'09-7564-4714', email:'user12@example.com', note:'', firstContact:'2024-12-12', contactDate:'2024-12-16', firstReply:'2024-12-16', meetingDate:'2024-12-20', quoteDate:'2024-12-23', quoteAmt:1300, contractSentDate:'2025-01-05', contractAmt:1300, contractDate:'2025-01-20' },
+  { name:'有限会社伊藤物産', rep:'渡辺 大', stage:'contract', channel:'freee', biz:'個人', contractStatus:'送信済み', tel:'06-4222-6533', email:'user13@example.com', note:'複数年契約検討中', firstContact:'2024-06-10', contactDate:'2024-06-15', firstReply:'2024-06-15', meetingDate:'2024-06-18', quoteDate:'2024-06-28', quoteAmt:1440, contractSentDate:'2025-05-25', contractAmt:1440, contractDate:null },
+  { name:'合同会社金田商会', rep:'伊藤 純', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-7576-2391', email:'user14@example.com', note:'予算確認待ち', firstContact:'2024-08-13', contactDate:'2024-08-15', firstReply:'2024-08-15', meetingDate:'2024-08-21', quoteDate:'2024-08-26', quoteAmt:1100, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社加藤ラボ', rep:'大地 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'03-1233-2683', email:'user15@example.com', note:'見積調整中', firstContact:'2024-08-11', contactDate:'2024-08-13', firstReply:'2024-08-13', meetingDate:'2024-08-25', quoteDate:'2024-08-31', quoteAmt:860, contractSentDate:'2024-09-14', contractAmt:860, contractDate:'2024-09-28' },
+  { name:'有限会社西野ホールディングス', rep:'光 星', stage:'contract', channel:'MF', biz:'個人', contractStatus:'送信済み', tel:'09-9219-3142', email:'user16@example.com', note:'', firstContact:'2023-11-04', contactDate:'2023-11-09', firstReply:'2023-11-09', meetingDate:'2023-11-26', quoteDate:'2023-12-11', quoteAmt:1180, contractSentDate:'2025-05-03', contractAmt:1180, contractDate:null },
+  { name:'渡辺ラボ', rep:'田中 大', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5537-1691', email:'user17@example.com', note:'', firstContact:'2024-05-28', contactDate:'2024-06-02', firstReply:'2024-06-02', meetingDate:'2024-06-05', quoteDate:'2024-06-20', quoteAmt:1420, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社森エージェンシー', rep:'南 青', stage:'contract', channel:'BP', biz:'個人', contractStatus:'送信済み', tel:'07-5057-9572', email:'user18@example.com', note:'再連絡予定', firstContact:'2024-10-07', contactDate:'2024-10-10', firstReply:'2024-10-10', meetingDate:'2024-10-21', quoteDate:'2024-10-31', quoteAmt:2320, contractSentDate:'2025-05-27', contractAmt:2320, contractDate:null },
+  { name:'株式会社加藤企画', rep:'加藤 守', stage:'contract', channel:'BP', biz:'法人', contractStatus:'締結済み', tel:'04-8663-4597', email:'user19@example.com', note:'複数年契約検討中', firstContact:'2024-05-15', contactDate:'2024-05-16', firstReply:'2024-05-16', meetingDate:'2024-06-07', quoteDate:'2024-06-12', quoteAmt:3040, contractSentDate:'2024-06-30', contractAmt:3040, contractDate:'2024-07-08' },
+  { name:'株式会社緑川ラボ', rep:'西野 緑', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-1296-7297', email:'user20@example.com', note:'競合検討中', firstContact:'2024-11-21', contactDate:'2024-11-25', firstReply:'2024-11-26', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社伊藤フーズ', rep:'森 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'09-3974-5430', email:'user21@example.com', note:'競合検討中', firstContact:'2024-03-30', contactDate:'2024-04-03', firstReply:'2024-04-03', meetingDate:'2024-04-15', quoteDate:'2024-04-24', quoteAmt:900, contractSentDate:'2025-05-22', contractAmt:900, contractDate:null },
+  { name:'株式会社森', rep:'伊藤 守', stage:'meeting', channel:'WEB', biz:'個人', contractStatus:null, tel:'03-4643-2091', email:'user22@example.com', note:'見積調整中', firstContact:'2024-02-27', contactDate:'2024-02-28', firstReply:'2024-02-28', meetingDate:'2024-03-16', quoteDate:'2024-03-27', quoteAmt:1460, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社吉田フーズ', rep:'田中 健', stage:'inquiry', channel:'MF', biz:'法人', contractStatus:null, tel:'04-6111-5997', email:'user23@example.com', note:'', firstContact:'2024-11-16', contactDate:'2024-11-20', firstReply:'2024-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社佐藤', rep:'鈴木 涼', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'07-8778-5025', email:'user24@example.com', note:'再連絡予定', firstContact:'2024-12-21', contactDate:'2024-12-22', firstReply:'2024-12-22', meetingDate:'2025-01-11', quoteDate:'2025-01-24', quoteAmt:1000, contractSentDate:'2025-02-10', contractAmt:1000, contractDate:'2025-02-25' },
+  { name:'合同会社未来企画', rep:'田中 花子', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'03-2158-5187', email:'user25@example.com', note:'複数年契約検討中', firstContact:'2025-01-02', contactDate:'2025-01-06', firstReply:'2025-01-03', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社池田商事', rep:'西野 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'04-5407-8304', email:'user26@example.com', note:'押印待ち', firstContact:'2024-05-03', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社佐藤システムズ', rep:'井上 力', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'04-1017-6494', email:'user27@example.com', note:'再連絡予定', firstContact:'2024-09-12', contactDate:null, firstReply:'2024-09-16', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社加藤建設', rep:'川上 一郎', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'06-1368-5909', email:'user28@example.com', note:'', firstContact:'2023-12-09', contactDate:'2023-12-12', firstReply:'2023-12-11', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'青空ソリューションズ', rep:'加藤 翔', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'送信済み', tel:'08-3371-1717', email:'user29@example.com', note:'', firstContact:'2025-01-29', contactDate:'2025-02-04', firstReply:'2025-02-04', meetingDate:'2025-02-19', quoteDate:'2025-03-05', quoteAmt:3580, contractSentDate:'2025-05-27', contractAmt:3580, contractDate:null },
+  { name:'合同会社伊藤', rep:'佐藤 花子', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'08-6909-2718', email:'user30@example.com', note:'', firstContact:'2024-12-30', contactDate:'2025-01-03', firstReply:'2025-01-03', meetingDate:'2025-01-07', quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社光工業', rep:'北野 守', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-2219-5350', email:'user31@example.com', note:'', firstContact:'2023-11-16', contactDate:'2023-11-18', firstReply:'2023-11-18', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社佐藤パートナーズ', rep:'松本 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'ドラフト', tel:'07-3415-6435', email:'user32@example.com', note:'再連絡予定', firstContact:'2024-08-13', contactDate:'2024-08-19', firstReply:'2024-08-19', meetingDate:'2024-08-25', quoteDate:'2024-08-28', quoteAmt:1780, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'西野エージェンシー', rep:'中村 涼', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-2406-8748', email:'user33@example.com', note:'', firstContact:'2024-08-30', contactDate:'2024-08-31', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社大関コンサル', rep:'井上 次郎', stage:'meeting', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-2479-3322', email:'user34@example.com', note:'競合検討中', firstContact:'2025-04-26', contactDate:'2025-04-29', firstReply:'2025-04-29', meetingDate:'2025-05-08', quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'未来', rep:'吉田 太郎', stage:'meeting', channel:'freee', biz:'法人', contractStatus:null, tel:'06-8385-7642', email:'user35@example.com', note:'資料送付済み', firstContact:'2025-02-01', contactDate:'2025-02-03', firstReply:'2025-02-03', meetingDate:'2025-02-21', quoteDate:'2025-03-01', quoteAmt:620, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社山田システムズ', rep:'清水 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'03-7437-7392', email:'user36@example.com', note:'複数年契約検討中', firstContact:'2024-07-05', contactDate:'2024-07-12', firstReply:'2024-07-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社池田サービス', rep:'林 守', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'06-9371-6170', email:'user37@example.com', note:'複数年契約検討中', firstContact:'2024-05-02', contactDate:'2024-05-05', firstReply:'2024-05-05', meetingDate:'2024-05-23', quoteDate:'2024-05-26', quoteAmt:1340, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社田中興業', rep:'縁 花子', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'08-5689-8955', email:'user38@example.com', note:'', firstContact:'2024-09-13', contactDate:'2024-09-17', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社清水フーズ', rep:'未来 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-8916-7461', email:'user39@example.com', note:'予算確認待ち', firstContact:'2024-06-07', contactDate:'2024-06-12', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社縁商会', rep:'縁 星', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'04-9974-4152', email:'user40@example.com', note:'複数年契約検討中', firstContact:'2024-12-24', contactDate:'2024-12-26', firstReply:'2024-12-26', meetingDate:'2025-01-03', quoteDate:'2025-01-11', quoteAmt:1080, contractSentDate:'2025-02-03', contractAmt:1080, contractDate:'2025-02-07' },
+  { name:'有限会社緑川商事', rep:'東 守', stage:'meeting', channel:'BP', biz:'個人', contractStatus:null, tel:'07-6900-3062', email:'user41@example.com', note:'複数年契約検討中', firstContact:'2024-03-17', contactDate:'2024-03-22', firstReply:'2024-03-22', meetingDate:'2024-03-31', quoteDate:'2024-04-04', quoteAmt:3420, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社小林商事', rep:'金田 青', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'07-9025-1002', email:'user42@example.com', note:'', firstContact:'2025-03-09', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社木村サービス', rep:'加藤 三郎', stage:'inquiry', channel:'紹介', biz:'個人', contractStatus:null, tel:'09-8492-2392', email:'user43@example.com', note:'予算確認待ち', firstContact:'2024-04-12', contactDate:'2024-04-14', firstReply:'2024-04-13', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林フーズ', rep:'光 星', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'08-2837-2629', email:'user44@example.com', note:'', firstContact:'2024-10-23', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社山田ラボ', rep:'橋本 緑', stage:'contract', channel:'紹介', biz:'法人', contractStatus:'締結済み', tel:'05-6183-4970', email:'user45@example.com', note:'複数年契約検討中', firstContact:'2024-04-20', contactDate:'2024-04-22', firstReply:'2024-04-22', meetingDate:'2024-04-28', quoteDate:'2024-05-07', quoteAmt:3580, contractSentDate:'2024-05-13', contractAmt:3580, contractDate:'2024-06-01' },
+  { name:'有限会社木村ソリューションズ', rep:'佐藤 永', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'08-7890-6936', email:'user46@example.com', note:'見積調整中', firstContact:'2024-07-18', contactDate:'2024-07-21', firstReply:'2024-07-20', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社橋本コンサル', rep:'木村 緑', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'04-5342-5832', email:'user47@example.com', note:'', firstContact:'2024-03-14', contactDate:'2024-03-15', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'田中パートナーズ', rep:'加藤 純', stage:'contract', channel:'MF', biz:'法人', contractStatus:'確認中', tel:'03-4488-1387', email:'user48@example.com', note:'予算確認待ち', firstContact:'2024-03-27', contactDate:'2024-03-29', firstReply:'2024-03-29', meetingDate:'2024-04-05', quoteDate:'2024-04-10', quoteAmt:1600, contractSentDate:'2025-05-08', contractAmt:1600, contractDate:null },
+  { name:'佐藤システムズ', rep:'大関 力', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'05-8248-3773', email:'user49@example.com', note:'競合検討中', firstContact:'2025-02-24', contactDate:'2025-02-28', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社大地コンサル', rep:'大関 力', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'09-6057-8085', email:'user50@example.com', note:'', firstContact:'2025-03-10', contactDate:'2025-03-13', firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社海野ソリューションズ', rep:'鈴木 星', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'04-7631-1666', email:'user51@example.com', note:'資料送付済み', firstContact:'2024-07-29', contactDate:null, firstReply:'2024-08-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社海野フーズ', rep:'緑川 一郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'05-6185-5515', email:'user52@example.com', note:'複数年契約検討中', firstContact:'2025-02-01', contactDate:'2025-02-07', firstReply:'2025-02-07', meetingDate:'2025-02-11', quoteDate:'2025-02-14', quoteAmt:2300, contractSentDate:'2025-03-06', contractAmt:2300, contractDate:'2025-03-24' },
+  { name:'合同会社東デザイン', rep:'山田 翔', stage:'contract', channel:'freee', biz:'個人', contractStatus:'締結済み', tel:'09-3479-4868', email:'user53@example.com', note:'資料送付済み', firstContact:'2024-12-25', contactDate:'2024-12-28', firstReply:'2024-12-28', meetingDate:'2025-01-04', quoteDate:'2025-01-15', quoteAmt:700, contractSentDate:'2025-01-25', contractAmt:700, contractDate:'2025-01-31' },
+  { name:'渡辺工業', rep:'清水 次郎', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'04-2579-7898', email:'user54@example.com', note:'', firstContact:'2024-02-10', contactDate:'2024-02-16', firstReply:'2024-02-16', meetingDate:'2024-02-23', quoteDate:'2024-02-29', quoteAmt:1080, contractSentDate:'2024-03-24', contractAmt:1080, contractDate:'2024-04-03' },
+  { name:'有限会社池田フーズ', rep:'空 守', stage:'inquiry', channel:'freee', biz:'法人', contractStatus:null, tel:'05-5162-5265', email:'user55@example.com', note:'再連絡予定', firstContact:'2024-01-08', contactDate:'2024-01-10', firstReply:'2024-01-10', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社高橋建設', rep:'清水 大', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'送信済み', tel:'07-9623-4790', email:'user56@example.com', note:'資料送付済み', firstContact:'2024-09-25', contactDate:'2024-09-26', firstReply:'2024-09-26', meetingDate:'2024-10-04', quoteDate:'2024-10-08', quoteAmt:600, contractSentDate:'2025-05-15', contractAmt:600, contractDate:null },
+  { name:'合同会社高橋企画', rep:'南 健', stage:'inquiry', channel:'紹介', biz:'法人', contractStatus:null, tel:'06-5258-1103', email:'user57@example.com', note:'', firstContact:'2023-10-21', contactDate:null, firstReply:null, meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社加藤商事', rep:'井上 守', stage:'contract', channel:'freee', biz:'法人', contractStatus:'締結済み', tel:'03-4333-1186', email:'user58@example.com', note:'競合検討中', firstContact:'2023-10-01', contactDate:'2023-10-05', firstReply:'2023-10-05', meetingDate:'2023-10-14', quoteDate:'2023-10-26', quoteAmt:820, contractSentDate:'2023-11-01', contractAmt:820, contractDate:'2023-11-20' },
+  { name:'合同会社風工業', rep:'吉田 純', stage:'contract', channel:'BP', biz:'個人', contractStatus:'締結済み', tel:'08-5442-7713', email:'user59@example.com', note:'再連絡予定', firstContact:'2024-10-30', contactDate:'2024-11-05', firstReply:'2024-11-05', meetingDate:'2024-11-08', quoteDate:'2024-11-15', quoteAmt:4120, contractSentDate:'2024-11-20', contractAmt:4120, contractDate:'2024-12-05' },
+  { name:'吉田興業', rep:'中村 次郎', stage:'inquiry', channel:'BP', biz:'法人', contractStatus:null, tel:'06-6975-8551', email:'user60@example.com', note:'', firstContact:'2025-02-28', contactDate:'2025-03-05', firstReply:'2025-03-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社南デザイン', rep:'加藤 力', stage:'inquiry', channel:'WEB', biz:'個人', contractStatus:null, tel:'05-3651-9538', email:'user61@example.com', note:'', firstContact:'2024-07-04', contactDate:'2024-07-06', firstReply:'2024-07-05', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社小林商事', rep:'北野 永', stage:'meeting', channel:'freee', biz:'個人', contractStatus:null, tel:'03-7355-2413', email:'user62@example.com', note:'', firstContact:'2024-12-22', contactDate:'2024-12-27', firstReply:'2024-12-27', meetingDate:'2025-01-04', quoteDate:'2025-01-17', quoteAmt:1300, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'合同会社空コンサル', rep:'佐藤 純', stage:'inquiry', channel:'BP', biz:'個人', contractStatus:null, tel:'07-3563-7284', email:'user63@example.com', note:'再連絡予定', firstContact:'2024-12-31', contactDate:'2025-01-02', firstReply:'2025-01-02', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'株式会社青空製作所', rep:'大関 緑', stage:'contract', channel:'WEB', biz:'法人', contractStatus:'締結済み', tel:'07-6017-7882', email:'user64@example.com', note:'', firstContact:'2024-12-04', contactDate:'2024-12-06', firstReply:'2024-12-06', meetingDate:'2024-12-23', quoteDate:'2025-01-02', quoteAmt:1640, contractSentDate:'2025-01-07', contractAmt:1640, contractDate:'2025-01-26' },
+  { name:'山本ソリューションズ', rep:'未来 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'03-3104-6874', email:'user65@example.com', note:'', firstContact:'2024-12-12', contactDate:'2024-12-13', firstReply:'2024-12-13', meetingDate:'2025-01-05', quoteDate:'2025-01-16', quoteAmt:1940, contractSentDate:'2025-02-10', contractAmt:1940, contractDate:'2025-02-24' },
+  { name:'合同会社鈴木工業', rep:'月見 三郎', stage:'contract', channel:'WEB', biz:'個人', contractStatus:'締結済み', tel:'04-3156-9058', email:'user66@example.com', note:'', firstContact:'2025-01-30', contactDate:'2025-02-01', firstReply:'2025-02-01', meetingDate:'2025-02-14', quoteDate:'2025-02-18', quoteAmt:2300, contractSentDate:'2025-03-03', contractAmt:2300, contractDate:'2025-03-15' },
+  { name:'合同会社川上フーズ', rep:'月見 大', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'05-7099-1603', email:'user67@example.com', note:'見積調整中', firstContact:'2025-02-13', contactDate:null, firstReply:'2025-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社中村ファーム', rep:'田中 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'09-8422-9543', email:'user68@example.com', note:'', firstContact:'2024-02-16', contactDate:null, firstReply:'2024-02-17', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社大関企画', rep:'空 花子', stage:'contract', channel:'MF', biz:'法人', contractStatus:'締結済み', tel:'05-6420-2333', email:'user69@example.com', note:'押印待ち', firstContact:'2024-12-19', contactDate:'2024-12-21', firstReply:'2024-12-21', meetingDate:'2024-12-28', quoteDate:'2025-01-04', quoteAmt:1860, contractSentDate:'2025-01-29', contractAmt:1860, contractDate:'2025-02-15' },
+  { name:'有限会社月見興業', rep:'雲井 力', stage:'inquiry', channel:'freee', biz:'個人', contractStatus:null, tel:'03-3163-9001', email:'user70@example.com', note:'資料送付済み', firstContact:'2024-03-25', contactDate:null, firstReply:'2024-03-31', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
+  { name:'有限会社風物産', rep:'雲井 翔', stage:'inquiry', channel:'WEB', biz:'法人', contractStatus:null, tel:'07-3190-4345', email:'user71@example.com', note:'資料送付済み', firstContact:'2023-12-25', contactDate:'2023-12-31', firstReply:'2023-12-29', meetingDate:null, quoteDate:null, quoteAmt:null, contractSentDate:null, contractAmt:null, contractDate:null },
 ];
 
 const stageOrder = { inquiry: 0, meeting: 1, contract: 2 };
@@ -825,13 +895,14 @@ function renderInquiry() {
     const moved = c.stage !== 'inquiry';
     return '<tr class="' + (moved ? 'moved-row' : '') + '">' +
       '<td>' + c.name + '</td><td>' + c.rep + '</td><td>' + fmtDate(c.firstContact) + '</td>' +
+      '<td>' + fmtDateOrPending(c.contactDate) + '</td>' +
       '<td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
       '<td>' + c.tel + '</td><td>' + c.email + '</td><td>' + fmtDate(c.firstReply) + '</td>' +
       '<td>' + daysBadge(daysSince(c.firstContact)) + '</td>' +
       '<td>' + (stageOrder[c.stage] >= 1 ? '<span class="done-mark">済</span>' : '-') + '</td>' +
       '<td>' + (c.note||'-') + '</td></tr>';
   }).join('');
-  document.getElementById('tbody-inquiry').innerHTML = html || '<tr class="empty-row"><td colspan="11">該当する顧客はありません</td></tr>';
+  document.getElementById('tbody-inquiry').innerHTML = html || '<tr class="empty-row"><td colspan="12">該当する顧客はありません</td></tr>';
 }
 
 function renderMeeting() {
@@ -843,7 +914,7 @@ function renderMeeting() {
     return '<tr class="' + (moved ? 'moved-row' : '') + '">' +
       '<td>' + c.name + '</td><td>' + c.rep + '</td><td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
       '<td>' + fmtDate(c.meetingDate) + '</td>' +
-      '<td>' + fmtDate(c.quoteDate) + '</td><td>' + yen(c.quoteAmt) + '</td>' +
+      '<td>' + fmtDateOrPending(c.quoteDate) + '</td><td>' + yen(c.quoteAmt) + '</td>' +
       '<td>' + daysBadge(daysSince(c.quoteDate)) + '</td>' +
       '<td>' + c.tel + '</td><td>' + c.email + '</td><td>' + (c.note||'-') + '</td></tr>';
   }).join('');
@@ -859,7 +930,7 @@ function renderContract() {
     const closed = !!c.contractDate;
     return '<tr class="' + (closed ? 'moved-row' : '') + '">' +
       '<td>' + c.name + '</td><td>' + c.rep + '</td><td><span class="pill">' + c.biz + '</span></td><td><span class="pill">' + c.channel + '</span></td>' +
-      '<td>' + fmtDate(c.contractSentDate) + '</td>' +
+      '<td>' + fmtDateOrPending(c.contractSentDate) + '</td>' +
       '<td>' + yen(c.contractAmt) + '</td>' +
       '<td>' + (closed ? '<span class="done-mark">締結済</span>' : daysBadge(daysSince(c.contractSentDate))) + '</td>' +
       '<td>' + (c.contractDate ? fmtDate(c.contractDate) : '<span class="pill">未締結</span>') + '</td>' +
