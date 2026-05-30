@@ -460,29 +460,6 @@
     </div>
   </div>
 
-  <!-- 流入チャネル分析 -->
-  <div class="section-label">流入チャネル分析</div>
-  <div class="analytics-row">
-    <div class="card" style="margin-bottom:0">
-      <div class="card-header"><span class="card-title">流入チャネル比率</span></div>
-      <div style="position:relative; width:100%; height:220px;">
-        <canvas id="channelPie" role="img" aria-label="流入チャネル比率の円グラフ"></canvas>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="card-header"><span class="card-title">チャネル別 成約率</span></div>
-      <div style="position:relative; width:100%; height:220px;">
-        <canvas id="channelRate" role="img" aria-label="チャネル別成約率の棒グラフ"></canvas>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="card-header"><span class="card-title">チャネル別 平均契約金額</span></div>
-      <div style="position:relative; width:100%; height:220px;">
-        <canvas id="channelAvg" role="img" aria-label="チャネル別平均契約金額の棒グラフ"></canvas>
-      </div>
-    </div>
-  </div>
-
   <div class="notice">現在サンプルデータを表示しています。スプレッドシート（1顧客＝1行 / stage列で管理）と連携すると実データが反映されます。</div>
 
 
@@ -945,26 +922,8 @@ const scaleY = { grid: { color: 'rgba(136,135,128,0.12)' }, ticks: { font: { siz
 
 
 
-// パイプラインビューのチャート
+// パイプラインビューのチャート（チャネル分析は「流入チャネル分析」ページに集約）
 function initPipelineCharts() {
-new Chart(document.getElementById('channelPie'), {
-  type: 'doughnut',
-  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total), backgroundColor: channelColors, borderWidth: 0, hoverOffset: 4 }] },
-  options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
-    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, color: '#888780', padding: 10, boxWidth: 10 } } } }
-});
-new Chart(document.getElementById('channelRate'), {
-  type: 'bar',
-  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].total ? Math.round(cStats[ch].won/cStats[ch].total*100) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v + '%' }, max: 100 } } }
-});
-new Chart(document.getElementById('channelAvg'), {
-  type: 'bar',
-  data: { labels: channels, datasets: [{ data: channels.map(ch => cStats[ch].won ? Math.round(cStats[ch].amtSum/cStats[ch].won) : 0), backgroundColor: channelColors, borderRadius: 4 }] },
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-    scales: { x: scaleX, y: { ...scaleY, ticks: { ...scaleY.ticks, callback: v => v.toLocaleString() + '千円' } } } }
-});
 }
 // 分析ビューのチャート（同じ集計を別canvasに）
 function initAnalyticsCharts() {
